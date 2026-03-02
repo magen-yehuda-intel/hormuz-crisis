@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strait of Hormuz Crisis — Annotated Intel Map</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d1117; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  #map { width: 100vw; height: 100vh; }
+  .leaflet-popup-content-wrapper { background: rgba(13,17,23,0.95); color: #e6edf3; border: 1px solid #30363d; border-radius: 8px; }
+  .leaflet-popup-tip { background: rgba(13,17,23,0.95); }
+  .leaflet-popup-content { font-size: 13px; line-height: 1.5; }
+  .leaflet-popup-content strong { color: #58a6ff; }
+  .leaflet-popup-content .red { color: #f85149; }
+  .leaflet-popup-content .yellow { color: #d29922; }
+  .leaflet-popup-content .green { color: #3fb950; }
+
+  /* HUD overlay */
+  #hud { position: fixed; top: 12px; left: 60px; z-index: 1000; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; }
+  .hud-chip { background: rgba(13,17,23,0.9); border: 1px solid #30363d; border-radius: 6px; padding: 6px 12px; font-size: 12px; color: #e6edf3; pointer-events: auto; }
+  .hud-chip .val { font-size: 18px; font-weight: 700; display: block; }
+  .hud-chip .val.red { color: #f85149; }
+  .hud-chip .val.yellow { color: #d29922; }
+  .hud-chip .lbl { color: #8b949e; font-size: 10px; }
+
+  #title-bar { position: fixed; bottom: 12px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(13,17,23,0.9); border: 1px solid #30363d; border-radius: 8px; padding: 8px 20px; text-align: center; pointer-events: none; }
+  #title-bar h1 { color: #e6edf3; font-size: 16px; margin: 0; }
+  #title-bar p { color: #8b949e; font-size: 11px; margin: 2px 0 0; }
+
+  #legend { position: fixed; bottom: 12px; right: 12px; z-index: 1000; background: rgba(13,17,23,0.9); border: 1px solid #30363d; border-radius: 8px; padding: 10px 14px; font-size: 11px; color: #8b949e; }
+  .leg-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  @keyframes pulse-ring {
+    0% { transform: scale(1); opacity: 0.6; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <div class="hud-chip"><span class="val red">-94%</span><span class="lbl">Tanker Transits</span></div>
+  <div class="hud-chip"><span class="val red">-80%</span><span class="lbl">All Vessel Transits</span></div>
+  <div class="hud-chip"><span class="val yellow">150+</span><span class="lbl">Ships Stranded</span></div>
+  <div class="hud-chip"><span class="val yellow">40+</span><span class="lbl">VLCCs Idling in Gulf</span></div>
+  <div class="hud-chip"><span class="val red">5</span><span class="lbl">Vessels Struck</span></div>
+  <div class="hud-chip"><span class="val red">CRITICAL</span><span class="lbl">JMIC Threat Level</span></div>
+</div>
+
+<div id="title-bar">
+  <h1>🌊 Strait of Hormuz Crisis — Live Intel Map</h1>
+  <p>March 2, 2026 5:37 PM ET · Tanker-only AIS data · Sources: Windward AI, gCaptain, Reuters, Vortexa, Kpler</p>
+</div>
+
+<div id="legend">
+  <div style="color:#e6edf3;font-weight:600;margin-bottom:4px;">Legend</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#f85149;"></span> Vessel Strike</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#f0883e;"></span> Infrastructure Strike</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#d29922;"></span> Port Disruption</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#a371f7;"></span> Tanker Anchorage / Backup</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#58a6ff;"></span> Bypass Pipeline</div>
+  <div class="leg-row"><span class="leg-dot" style="background:#f85149;border:2px dashed #f85149;background:transparent;"></span> Chokepoint / Danger Zone</div>
+</div>
+
+<div id="map"></div>
+
+<script>
+const map = L.map('map', {
+  center: [25.5, 55.5],
+  zoom: 6,
+  zoomControl: false,
+  attributionControl: false
+});
+
+L.control.zoom({ position: 'topright' }).addTo(map);
+
+// Dark basemap
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+  maxZoom: 19
+}).addTo(map);
+
+// === CHOKEPOINT: Strait of Hormuz ===
+const straitPoly = L.polygon([
+  [26.6, 56.0], [26.6, 56.6], [25.8, 57.2], [25.2, 57.0],
+  [25.5, 56.4], [26.1, 56.0]
+], {
+  color: '#f85149', weight: 2, dashArray: '8,6', fillColor: '#f85149', fillOpacity: 0.08
+}).addTo(map).bindPopup(`
+  <strong>Strait of Hormuz — DANGER ZONE</strong><br>
+  <span class="red">JMIC Threat: CRITICAL</span><br>
+  21 miles wide at narrowest<br>
+  Normally: ~138 transits/day, ~20% global oil<br>
+  <span class="red">Now: 28 transits/day (-80%)</span><br>
+  <span class="red">Tankers: 3/day (was 50) — -94%</span><br>
+  Zero US/UK/EU-flagged vessels transiting<br>
+  Significant GPS/GNSS interference reported
+`);
+
+// Helper: pulsing circle marker
+function pulseMarker(lat, lng, color, radius) {
+  const m = L.circleMarker([lat, lng], { radius: radius, color: color, fillColor: color, fillOpacity: 0.7, weight: 2 }).addTo(map);
+  // Pulse ring
+  const ring = L.circleMarker([lat, lng], { radius: radius, color: color, fillOpacity: 0, weight: 2, opacity: 0.4 }).addTo(map);
+  return m;
+}
+
+// === VESSEL STRIKES (red) ===
+const strikes = [
+  { name: 'MKD Vyom', lat: 23.95, lon: 57.6, imo: '9284386', flag: 'Marshall Islands', type: 'Crude tanker',
+    detail: 'Engine room explosion.<br><span class="red">1 crew member killed.</span><br>44nm NW of Muscat.' },
+  { name: 'Skylight', lat: 26.25, lon: 56.25, imo: '9330020', flag: 'Sanctioned', type: 'Chemical tanker',
+    detail: 'Fire onboard.<br><span class="red">4 injured, 20 evacuated.</span><br>5nm north of Khasab, Oman.' },
+  { name: 'Hercules Star', lat: 25.85, lon: 56.0, imo: '9916135', flag: 'Gibraltar', type: 'Oil tanker',
+    detail: 'Struck 17nm NW of Mina Saqr, UAE.<br>Fire extinguished, no injuries.' },
+  { name: 'Sea La Donna', lat: 25.6, lon: 56.8, imo: '9380532', flag: '—', type: '—',
+    detail: 'GPS spoofing/jamming indicators.<br><span class="yellow">Under investigation.</span>' },
+  { name: 'Stena Imperative', lat: 26.22, lon: 50.6, imo: '—', flag: 'US-flagged', type: 'Chemical/products',
+    detail: 'Struck <strong>in port</strong> — Bahrain.<br><span class="red">1 shipyard worker killed, 2 injured.</span><br>Iranian-origin drones/missiles suspected.' },
+];
+
+strikes.forEach(s => {
+  const m = pulseMarker(s.lat, s.lon, '#f85149', 9);
+  m.bindPopup(`
+    <strong style="color:#f85149;">⚠️ VESSEL STRIKE: ${s.name}</strong><br>
+    IMO: ${s.imo} · Flag: ${s.flag}<br>
+    Type: ${s.type}<br><br>
+    ${s.detail}
+  `);
+  // Explosion icon
+  L.marker([s.lat, s.lon], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="font-size:22px;text-shadow:0 0 8px #f85149;">💥</div>`,
+      iconSize: [24, 24], iconAnchor: [12, 12]
+    })
+  }).addTo(map);
+});
+
+// === INFRASTRUCTURE STRIKES (orange) ===
+const infra = [
+  { name: 'Ras Tanura Refinery', lat: 26.68, lon: 50.17, status: 'SHUT',
+    detail: '<span class="red">550,000 bpd — SHUT after drone strike</span><br>Saudi Aramco\'s largest domestic refinery.' },
+  { name: 'Kharg Island', lat: 29.24, lon: 50.31, status: 'STRUCK',
+    detail: '<span class="red">Handles ~90% of Iran\'s oil exports.</span><br>Struck during Operation Epic Fury.' },
+  { name: 'Isfahan Refinery', lat: 32.62, lon: 51.66, status: 'STRUCK',
+    detail: 'Struck during Operation Epic Fury.<br>Major Iranian refinery.' },
+  { name: 'South Pars', lat: 27.5, lon: 52.6, status: 'DAMAGED',
+    detail: '<span class="red">Iran\'s largest gas field.</span><br>Struck Jun 2025, sustained damage.<br>~4-6 Bcf/d capacity.' },
+];
+
+infra.forEach(i => {
+  const m = pulseMarker(i.lat, i.lon, '#f0883e', 8);
+  m.bindPopup(`<strong style="color:#f0883e;">🔥 ${i.name}</strong> — <span class="red">${i.status}</span><br><br>${i.detail}`);
+  L.marker([i.lat, i.lon], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="font-size:18px;text-shadow:0 0 6px #f0883e;">🔥</div>`,
+      iconSize: [20, 20], iconAnchor: [10, 10]
+    })
+  }).addTo(map);
+});
+
+// === LNG FACILITIES (orange — critical) ===
+const lng = [
+  { name: 'Ras Laffan (Qatar)', lat: 25.93, lon: 51.53,
+    detail: '<span class="red">🚨 ALL LNG OUTPUT HALTED</span><br>Qatar = world\'s #2 LNG exporter<br>~10.8 Bcf/d combined with Mesaieed<br><strong class="red">= ~20% of global LNG supply OFFLINE</strong><br>No strategic LNG reserve exists.' },
+  { name: 'Mesaieed (Qatar)', lat: 25.0, lon: 51.55,
+    detail: '<span class="red">HALTED</span><br>Qatar LNG export terminal.' },
+  { name: 'Leviathan (Israel)', lat: 33.4, lon: 34.15,
+    detail: '<span class="yellow">Precautionary shutdown</span><br>~1.2 Bcf/d capacity.' },
+  { name: 'Karish (Israel)', lat: 33.08, lon: 34.1,
+    detail: '<span class="yellow">Precautionary shutdown</span>' },
+  { name: 'Tamar (Israel)', lat: 32.65, lon: 34.4,
+    detail: '<span class="yellow">Precautionary shutdown</span><br>Combined Israel: ~3 Bcf/d offline.' },
+];
+
+lng.forEach(l => {
+  const m = pulseMarker(l.lat, l.lon, '#f0883e', 10);
+  m.bindPopup(`<strong style="color:#f0883e;">⛽ ${l.name}</strong><br><br>${l.detail}`);
+  L.marker([l.lat, l.lon], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="font-size:16px;">⛽</div>`,
+      iconSize: [18, 18], iconAnchor: [9, 9]
+    })
+  }).addTo(map);
+});
+
+// === PORT DISRUPTIONS (yellow) ===
+const ports = [
+  { name: 'Jebel Ali (Dubai)', lat: 25.01, lon: 55.06,
+    detail: '<span class="yellow">Briefly suspended</span> after aerial interception/fire.<br>Now: limited operations.' },
+  { name: 'Bahrain Port', lat: 26.0, lon: 50.55,
+    detail: '<span class="yellow">Temporarily suspended</span> port operations and pilotage.' },
+  { name: 'Duqm Port (Oman)', lat: 19.67, lon: 57.71,
+    detail: '2 UAV strikes, 1 injured.<br><span class="green">Still operational.</span>' },
+];
+
+ports.forEach(p => {
+  pulseMarker(p.lat, p.lon, '#d29922', 7).bindPopup(`<strong style="color:#d29922;">⚓ ${p.name}</strong><br><br>${p.detail}`);
+});
+
+// === TANKER ANCHORAGE / BACKUP ZONES (purple) ===
+const anchorages = [
+  { name: 'Fujairah Anchorage', lat: 25.15, lon: 56.35, radius: 25,
+    detail: '<span class="red">Major tanker backup zone.</span><br>40+ VLCCs idling (~80M barrels trapped).<br>World\'s largest bunkering/STS zone — but current density far above normal.<br>Ships setting Fujairah as destination = parking, not transiting.' },
+  { name: 'Gulf of Oman Holding Zone', lat: 23.5, lon: 59.0, radius: 40,
+    detail: '150+ ships anchoring/drifting outside strait.<br>Waiting for security situation to clear.<br>"Wait-and-see" approach per Fearnley Securities.' },
+  { name: 'Inside-Gulf Holding', lat: 26.0, lon: 52.5, radius: 30,
+    detail: '40+ VLCCs stuck inside Persian Gulf.<br>Cannot exit through Hormuz.<br><span class="red">JPMorgan: >25 days → storage fills → forced production shut-ins.</span>' },
+];
+
+anchorages.forEach(a => {
+  L.circle([a.lat, a.lon], {
+    radius: a.radius * 1000, color: '#a371f7', weight: 1.5, dashArray: '5,5',
+    fillColor: '#a371f7', fillOpacity: 0.08
+  }).addTo(map).bindPopup(`<strong style="color:#a371f7;">🚢 ${a.name}</strong><br><br>${a.detail}`);
+});
+
+// === BYPASS PIPELINES (blue) ===
+// East-West Pipeline (Saudi: Abqaiq → Yanbu)
+L.polyline([
+  [25.93, 49.68], [25.5, 48.5], [24.8, 46.0], [24.2, 42.0], [24.1, 38.05]
+], { color: '#58a6ff', weight: 3, dashArray: '10,6', opacity: 0.7 }).addTo(map)
+  .bindPopup(`<strong style="color:#58a6ff;">🔵 East-West Pipeline (Petroline)</strong><br><br>Saudi Arabia: Abqaiq → Yanbu (Red Sea)<br>Capacity: ~5M bpd<br><span class="yellow">Already partially in use — limited spare capacity.</span><br>Bypasses Hormuz entirely.`);
+
+L.marker([24.1, 38.05], {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="background:rgba(13,17,23,0.85);border:1px solid #58a6ff;border-radius:4px;padding:2px 6px;font-size:10px;color:#58a6ff;white-space:nowrap;">Yanbu (Red Sea)</div>`,
+    iconSize: [80, 20], iconAnchor: [40, 10]
+  })
+}).addTo(map);
+
+// ADCOP Pipeline (UAE: Habshan → Fujairah)
+L.polyline([
+  [23.8, 53.8], [24.3, 55.0], [25.15, 56.35]
+], { color: '#58a6ff', weight: 3, dashArray: '10,6', opacity: 0.7 }).addTo(map)
+  .bindPopup(`<strong style="color:#58a6ff;">🔵 ADCOP Pipeline (UAE)</strong><br><br>Habshan → Fujairah<br>Capacity: 1.5M bpd<br><span class="yellow">Already partially in use.</span><br>Bypasses Hormuz.`);
+
+// === STORAGE TIMELINE ANNOTATIONS ===
+L.marker([24.5, 46.5], {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="background:rgba(22,27,34,0.9);border:1px solid #d29922;border-radius:6px;padding:6px 10px;font-size:11px;color:#e6edf3;max-width:180px;line-height:1.4;">
+      <strong style="color:#d29922;">⏱️ Saudi Storage</strong><br>
+      82M bbl (56% capacity)<br>
+      <span style="color:#f85149;font-weight:700;">Fills in ~10 days</span>
+    </div>`,
+    iconSize: [180, 60], iconAnchor: [90, 30]
+  })
+}).addTo(map);
+
+L.marker([24.0, 54.5], {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="background:rgba(22,27,34,0.9);border:1px solid #d29922;border-radius:6px;padding:6px 10px;font-size:11px;color:#e6edf3;max-width:160px;line-height:1.4;">
+      <strong style="color:#d29922;">⏱️ UAE Storage</strong><br>
+      34M bbl (40%+ capacity)
+    </div>`,
+    iconSize: [160, 50], iconAnchor: [80, 25]
+  })
+}).addTo(map);
+
+L.marker([29.3, 47.5], {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="background:rgba(22,27,34,0.9);border:1px solid #d29922;border-radius:6px;padding:6px 10px;font-size:11px;color:#e6edf3;max-width:160px;line-height:1.4;">
+      <strong style="color:#d29922;">⏱️ Kuwait Storage</strong><br>
+      28M bbl (40%+ capacity)
+    </div>`,
+    iconSize: [160, 50], iconAnchor: [80, 25]
+  })
+}).addTo(map);
+
+// === KEY QUOTE ANNOTATION ===
+L.marker([20.0, 55.0], {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="background:rgba(22,27,34,0.92);border:1px solid #f85149;border-radius:8px;padding:8px 12px;font-size:11px;color:#e6edf3;max-width:280px;line-height:1.4;font-style:italic;">
+      "If the reduction in tanker traffic continues for a week, it will be <span style="color:#f85149;font-weight:700;">historic</span>. Beyond that, it would be <span style="color:#f85149;font-weight:700;">epochal</span> for the oil market."<br>
+      <span style="color:#8b949e;font-style:normal;">— Jim Burkhard, S&P Global</span>
+    </div>`,
+    iconSize: [280, 80], iconAnchor: [140, 40]
+  })
+}).addTo(map);
+
+// === MARKET PRICES BOX ===
+L.marker([30.5, 58.0], {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="background:rgba(22,27,34,0.92);border:1px solid #30363d;border-radius:8px;padding:8px 12px;font-size:11px;color:#e6edf3;max-width:200px;line-height:1.5;">
+      <strong style="color:#58a6ff;">📈 Market Impact</strong><br>
+      Brent: <span style="color:#f85149;">$79-82 (+13%)</span><br>
+      TTF Gas: <span style="color:#f85149;">+50%</span><br>
+      JKM LNG: <span style="color:#f85149;">+39%</span><br>
+      Insurance: <span style="color:#f85149;">CANCELLED</span>
+    </div>`,
+    iconSize: [200, 90], iconAnchor: [100, 45]
+  })
+}).addTo(map);
+
+// === IRAN NAVY STATUS ===
+L.marker([27.2, 56.3], {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="background:rgba(22,27,34,0.9);border:1px solid #3fb950;border-radius:6px;padding:6px 10px;font-size:10px;color:#e6edf3;max-width:200px;line-height:1.4;">
+      <strong style="color:#3fb950;">🛥️ Bandar Abbas (Iran)</strong><br>
+      Iran navy: <span style="color:#f85149;">All 11 vessels sunk by CENTCOM</span><br>
+      Remaining: mines, shore missiles (C-802/Noor), fast boats, drones
+    </div>`,
+    iconSize: [200, 70], iconAnchor: [100, 35]
+  })
+}).addTo(map);
+
+// === TOTAL OFFLINE ANNOTATION ===
+L.marker([21.5, 50.0], {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="background:rgba(248,81,73,0.15);border:2px solid #f85149;border-radius:8px;padding:10px 14px;font-size:12px;color:#e6edf3;max-width:220px;line-height:1.5;text-align:center;">
+      <strong style="color:#f85149;font-size:14px;">TOTAL OFFLINE</strong><br>
+      <span style="font-size:20px;font-weight:700;color:#f85149;">~18-20 Bcf/d</span><br>
+      <span style="color:#8b949e;">~5% of global gas supply</span><br>
+      <span style="font-size:16px;font-weight:700;color:#f85149;">550K+ bpd</span><br>
+      <span style="color:#8b949e;">refining capacity</span>
+    </div>`,
+    iconSize: [220, 120], iconAnchor: [110, 60]
+  })
+}).addTo(map);
+
+</script>
+</body>
+</html>
