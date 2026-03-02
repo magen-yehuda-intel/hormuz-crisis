@@ -206,20 +206,79 @@ ports.forEach(p => {
 
 // === TANKER ANCHORAGE / BACKUP ZONES (purple) ===
 const anchorages = [
-  { name: 'Fujairah Anchorage', lat: 25.15, lon: 56.35, radius: 25,
+  { name: 'Fujairah Anchorage', lat: 25.15, lon: 56.35, radius: 25, ships: '40+ VLCCs (~80M bbl trapped)',
     detail: '<span class="red">Major tanker backup zone.</span><br>40+ VLCCs idling (~80M barrels trapped).<br>World\'s largest bunkering/STS zone — but current density far above normal.<br>Ships setting Fujairah as destination = parking, not transiting.' },
-  { name: 'Gulf of Oman Holding Zone', lat: 23.5, lon: 59.0, radius: 40,
+  { name: 'Gulf of Oman Holding Zone', lat: 23.5, lon: 59.0, radius: 40, ships: '150+ ships anchoring/drifting',
     detail: '150+ ships anchoring/drifting outside strait.<br>Waiting for security situation to clear.<br>"Wait-and-see" approach per Fearnley Securities.' },
-  { name: 'Inside-Gulf Holding', lat: 26.0, lon: 52.5, radius: 30,
+  { name: 'Inside-Gulf Holding', lat: 26.0, lon: 52.5, radius: 30, ships: '40+ VLCCs cannot exit',
     detail: '40+ VLCCs stuck inside Persian Gulf.<br>Cannot exit through Hormuz.<br><span class="red">JPMorgan: >25 days → storage fills → forced production shut-ins.</span>' },
 ];
 
 anchorages.forEach(a => {
   L.circle([a.lat, a.lon], {
-    radius: a.radius * 1000, color: '#a371f7', weight: 1.5, dashArray: '5,5',
-    fillColor: '#a371f7', fillOpacity: 0.08
+    radius: a.radius * 1000, color: '#a371f7', weight: 2, dashArray: '5,5',
+    fillColor: '#a371f7', fillOpacity: 0.12
   }).addTo(map).bindPopup(`<strong style="color:#a371f7;">🚢 ${a.name}</strong><br><br>${a.detail}`);
+  // Floating label
+  L.marker([a.lat, a.lon], {
+    icon: L.divIcon({
+      className: '',
+      html: `<div style="background:rgba(22,27,34,0.92);border:1px solid #a371f7;border-radius:6px;padding:5px 10px;font-size:11px;color:#e6edf3;max-width:220px;line-height:1.4;text-align:center;">
+        <strong style="color:#a371f7;">🚢 ${a.name}</strong><br>
+        <span style="font-size:10px;color:#8b949e;">${a.ships}</span>
+      </div>`,
+      iconSize: [220, 50], iconAnchor: [110, 25]
+    })
+  }).addTo(map);
 });
+
+// Dammam/Ras Tanura holding
+L.circle([26.5, 50.2], {
+  radius: 20000, color: '#a371f7', weight: 2, dashArray: '5,5',
+  fillColor: '#a371f7', fillOpacity: 0.12
+}).addTo(map).bindPopup(`<strong style="color:#a371f7;">🚢 Dammam / Ras Tanura Anchorage</strong><br><br>Tankers waiting near shut Ras Tanura refinery.<br>550K bpd offline — loading suspended.`);
+L.marker([26.5, 50.2], {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="background:rgba(22,27,34,0.92);border:1px solid #a371f7;border-radius:6px;padding:5px 10px;font-size:11px;color:#e6edf3;text-align:center;">
+      <strong style="color:#a371f7;">🚢 Dammam/Ras Tanura</strong><br>
+      <span style="font-size:10px;color:#8b949e;">Loading suspended</span>
+    </div>`,
+    iconSize: [180, 50], iconAnchor: [90, 25]
+  })
+}).addTo(map);
+
+// Bandar Abbas holding
+L.circle([26.8, 56.3], {
+  radius: 18000, color: '#a371f7', weight: 2, dashArray: '5,5',
+  fillColor: '#a371f7', fillOpacity: 0.12
+}).addTo(map).bindPopup(`<strong style="color:#a371f7;">🚢 Bandar Abbas Anchorage</strong><br><br>Iranian-flagged + sanctioned tankers clustering.<br>Iran's primary naval/commercial port.`);
+L.marker([27.0, 56.3], {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="background:rgba(22,27,34,0.92);border:1px solid #a371f7;border-radius:6px;padding:5px 10px;font-size:10px;color:#e6edf3;text-align:center;">
+      <strong style="color:#a371f7;">🚢 Bandar Abbas</strong><br>
+      <span style="font-size:9px;color:#8b949e;">Iranian tankers clustering</span>
+    </div>`,
+    iconSize: [160, 45], iconAnchor: [80, 22]
+  })
+}).addTo(map);
+
+// Muscat/SE Oman queue
+L.circle([22.5, 60.0], {
+  radius: 50000, color: '#a371f7', weight: 2, dashArray: '5,5',
+  fillColor: '#a371f7', fillOpacity: 0.10
+}).addTo(map).bindPopup(`<strong style="color:#a371f7;">🚢 SE Oman / Arabian Sea Queue</strong><br><br>Large concentration of tankers diverted away from strait.<br>Waiting for insurance/security clearance.`);
+L.marker([22.5, 60.0], {
+  icon: L.divIcon({
+    className: '',
+    html: `<div style="background:rgba(22,27,34,0.92);border:1px solid #a371f7;border-radius:6px;padding:5px 10px;font-size:11px;color:#e6edf3;text-align:center;">
+      <strong style="color:#a371f7;">🚢 Arabian Sea Queue</strong><br>
+      <span style="font-size:10px;color:#8b949e;">Tankers diverted, awaiting clearance</span>
+    </div>`,
+    iconSize: [220, 50], iconAnchor: [110, 25]
+  })
+}).addTo(map);
 
 // === BYPASS PIPELINES (blue) ===
 // East-West Pipeline (Saudi: Abqaiq → Yanbu)
