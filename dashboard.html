@@ -192,7 +192,7 @@ try {
 // Also try loading from metrics file via fetch (local dev)
 async function tryFetchMetrics() {
   try {
-    const r = await fetch('hormuz-metrics.jsonl');
+    const r = await fetch('hormuz-metrics.jsonl?t=' + Date.now());
     if (r.ok) {
       const text = await r.text();
       const fetched = text.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
