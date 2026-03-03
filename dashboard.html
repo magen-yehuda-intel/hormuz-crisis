@@ -14,6 +14,21 @@
     --red: #ef4444; --green: #22c55e; --blue: #3b82f6; --cyan: #06b6d4;
     --orange: #f97316; --purple: #a855f7; --pink: #ec4899;
   }
+
+  /* Tooltips */
+  [data-tooltip] { position: relative; cursor: help; }
+  [data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    background: #1e293b; color: #e2e8f0; font-size: 12px; font-weight: 400; letter-spacing: 0;
+    text-transform: none; padding: 8px 12px; border-radius: 6px; border: 1px solid #334155;
+    white-space: normal; width: max-content; max-width: 280px; line-height: 1.4;
+    z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.5); pointer-events: none;
+  }
+  [data-tooltip]:hover::before {
+    content: ''; position: absolute; bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%);
+    border: 6px solid transparent; border-top-color: #1e293b; z-index: 1000;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: var(--bg); color: var(--text); font-family: 'SF Mono', 'Fira Code', monospace; }
 
@@ -84,9 +99,10 @@
   <div>
     <h1>⚓ HORMUZ <span>CRISIS</span> TRACKER</h1>
     <div class="meta">Live AIS vessel intelligence • MarineTraffic data</div>
+    <div class="meta" id="lastUpdate" style="color:#64748b;font-size:11px">Loading…</div>
   </div>
   <div style="text-align:right">
-    <div class="severity" id="severityScore">—</div>
+    <div class="severity" id="severityScore" data-tooltip="Weighted composite index: Fujairah anchored ×2 + Gulf stuck ×1.5 + Oman queue + missing transits (vs 50/day) ×3 + zero-speed ×0.5 − healthy transits ×2. Pre-war ~100. Over 800 = full blockade.">—</div>
     <div class="meta">SEVERITY SCORE</div>
   </div>
 </div>
@@ -190,14 +206,14 @@ async function tryFetchMetrics() {
 
 // ── CARD DEFINITIONS ──
 const CARD_DEFS = [
-  { key: 'total_tankers', label: 'Total Tankers', color: var_color('blue') },
-  { key: 'fujairah_anchored', label: 'Fujairah Anchored', color: var_color('red'), bad: 'up' },
-  { key: 'inside_gulf_stuck', label: 'Inside Gulf Stuck', color: var_color('orange'), bad: 'up' },
-  { key: 'strait_transiting', label: 'Strait Transiting', color: var_color('green'), bad: 'down' },
-  { key: 'gulf_oman_queue', label: 'Gulf of Oman Queue', color: var_color('purple'), bad: 'up' },
-  { key: 'zero_speed_tankers', label: 'Zero Speed Tankers', color: var_color('pink'), bad: 'up' },
-  { key: 'iran_flagged', label: 'Iran-Flagged', color: var_color('accent'), bad: 'up' },
-  { key: 'avg_strait_speed', label: 'Avg Strait Speed (kn)', color: var_color('cyan'), bad: 'down', decimals: 1 },
+  { key: 'total_tankers', label: 'Total Tankers', color: var_color('blue'), tip: 'All tanker-class vessels (VLCC, Suezmax, Aframax, etc.) detected in the Persian Gulf, Strait of Hormuz, and Gulf of Oman region' },
+  { key: 'fujairah_anchored', label: 'Fujairah Anchored', color: var_color('red'), bad: 'up', tip: 'Tankers parked at Fujairah anchorage (Gulf of Oman side). Pre-war ~20. High = ships cannot transit Hormuz and are waiting outside.' },
+  { key: 'inside_gulf_stuck', label: 'Inside Gulf Stuck', color: var_color('orange'), bad: 'up', tip: 'Tankers trapped inside the Persian Gulf moving <2 kn. Pre-war ~45. High = loaded tankers cannot exit through Hormuz.' },
+  { key: 'strait_transiting', label: 'Strait Transiting', color: var_color('green'), bad: 'down', tip: 'Tankers actively passing through the Hormuz chokepoint (>3 kn). Pre-war: 53/day (UNCTAD). Low = blockade is effective.' },
+  { key: 'gulf_oman_queue', label: 'Gulf of Oman Queue', color: var_color('purple'), bad: 'up', tip: 'Tankers queuing in the Gulf of Oman waiting to enter Hormuz or rerouting. Pre-war ~25. High = traffic backup extending into open water.' },
+  { key: 'zero_speed_tankers', label: 'Zero Speed Tankers', color: var_color('pink'), bad: 'up', tip: 'Tankers at dead stop (<0.5 kn) across all zones. Pre-war ~70 (normal STS ops). High = widespread inability to proceed.' },
+  { key: 'iran_flagged', label: 'Iran-Flagged', color: var_color('accent'), bad: 'up', tip: 'All Iran-flagged vessels (NITC tankers + coastal/military). Pre-war ~180. Clustering above baseline may signal military mobilization.' },
+  { key: 'avg_strait_speed', label: 'Avg Strait Speed (kn)', color: var_color('cyan'), bad: 'down', decimals: 1, tip: 'Average speed of vessels in the strait zone. Pre-war: 12.5 kn. Low = ships are creeping, stopped, or avoiding transit.' },
 ];
 
 function var_color(name) {
@@ -230,6 +246,7 @@ function render() {
     card.className = 'card';
     card.style.borderLeftColor = def.color;
     card.style.borderLeftWidth = '3px';
+    if (def.tip) card.setAttribute('data-tooltip', def.tip);
 
     let deltaHtml = '';
     if (prev && prev[def.key] !== undefined) {
@@ -274,14 +291,14 @@ function render() {
 
   // LNG/Gas cards
   const lngDefs = [
-    { key: 'lng_gas_total', label: 'LNG/Gas Carriers', color: '#a78bfa' },
-    { key: 'lng_gas_stuck', label: 'LNG Stuck (<2kn)', color: '#ef4444' },
-    { key: 'lng_gas_transiting', label: 'LNG Transiting Strait', color: '#22c55e' },
-    { key: 'lng_gas_anchored_fujairah', label: 'LNG @ Fujairah', color: '#f97316' },
-    { key: 'lng_gas_inside_gulf', label: 'LNG Trapped in Gulf', color: '#ec4899' },
-    { key: 'lng_gas_queue_oman', label: 'LNG Queue (Oman)', color: '#a855f7' },
-    { key: 'qatar_bound', label: 'Qatar-Bound', color: '#06b6d4' },
-    { key: 'qatar_bound_stuck', label: 'Qatar-Bound Stuck', color: '#f59e0b' },
+    { key: 'lng_gas_total', label: 'LNG/Gas Carriers', color: '#a78bfa', tip: 'All LNG, LPG, and gas carriers detected in the region. Pre-war: 48/day transiting (UNCTAD Jun 2025). High count = carriers accumulating, not transiting.' },
+    { key: 'lng_gas_stuck', label: 'LNG Stuck (<2kn)', color: '#ef4444', tip: 'LNG/gas carriers moving <2 kn (effectively stopped). Pre-war: ~5. This is the core LNG disruption signal — stuck carriers = no deliveries.' },
+    { key: 'lng_gas_transiting', label: 'LNG Transiting Strait', color: '#22c55e', tip: 'LNG carriers actively passing through Hormuz (>3 kn). Pre-war: ~12 at any time. Near-zero = complete LNG supply cutoff through strait.' },
+    { key: 'lng_gas_anchored_fujairah', label: 'LNG @ Fujairah', color: '#f97316', tip: 'LNG carriers anchored at Fujairah. Pre-war: ~2. These are carriers that reached the Gulf of Oman side but cannot proceed.' },
+    { key: 'lng_gas_inside_gulf', label: 'LNG Trapped in Gulf', color: '#ec4899', tip: 'LNG carriers stuck inside the Persian Gulf. Pre-war: ~3 (loading at Ras Laffan/Mesaieed). High = loaded LNG carriers cannot exit.' },
+    { key: 'lng_gas_queue_oman', label: 'LNG Queue (Oman)', color: '#a855f7', tip: 'LNG carriers queuing in the Gulf of Oman. Pre-war: ~2. These are inbound carriers that cannot reach Qatar/UAE LNG terminals.' },
+    { key: 'qatar_bound', label: 'Qatar-Bound', color: '#06b6d4', tip: 'Vessels with Qatar destinations (Ras Laffan, Mesaieed, Doha). Qatar = world\'s largest LNG exporter. Pre-war: ~15/day.' },
+    { key: 'qatar_bound_stuck', label: 'Qatar-Bound Stuck', color: '#f59e0b', tip: 'Qatar-bound vessels unable to proceed (<2 kn). Pre-war: ~1. High = Qatar LNG exports physically blocked.' },
   ];
   const lngEl = document.getElementById('lngCards');
   lngEl.innerHTML = '';
@@ -298,7 +315,7 @@ function render() {
       deltaHtml = `<span style="color:${dc};font-size:11px">${arrow} ${Math.abs(d)}</span>`;
     }
     const ratioColor = ratio > 5 ? '#ef4444' : ratio > 3 ? '#f97316' : ratio > 1.5 ? '#f59e0b' : '#22c55e';
-    lngEl.innerHTML += `<div style="background:#0f172a;padding:12px;border-radius:8px;border-left:3px solid ${def.color}">
+    lngEl.innerHTML += `<div style="background:#0f172a;padding:12px;border-radius:8px;border-left:3px solid ${def.color};position:relative;cursor:help" data-tooltip="${def.tip || ''}">
       <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">${def.label}</div>
       <div style="font-size:28px;font-weight:800;color:${def.color};line-height:1.2">${val}</div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:2px">
@@ -332,6 +349,7 @@ function render() {
 
   // Status strip
   const ts = new Date(latest.timestamp);
+  document.getElementById('lastUpdate').textContent = 'Data updated: ' + ts.toLocaleString() + ' (' + snapshots.length + ' snapshots)';
   document.getElementById('statusStrip').innerHTML = `
     <span>Last snapshot: <b>${ts.toLocaleString()}</b></span>
     <span>Snapshots: <b>${snapshots.length}</b></span>
