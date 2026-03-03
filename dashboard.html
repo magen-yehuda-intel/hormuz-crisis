@@ -139,7 +139,8 @@
 <!-- Baseline reference panel -->
 <div style="max-width:1440px;margin:16px auto;padding:0 20px">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px">
-    <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:12px">📋 Pre-Crisis Baselines (Normal Hormuz Traffic)</h3>
+    <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:4px">📋 Baseline Reference — Change Since First Measurement</h3>
+    <div id="baselineDate" style="font-size:11px;color:#64748b;margin-bottom:12px"></div>
     <div id="baselineTable" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;font-size:13px"></div>
   </div>
 </div>
@@ -209,6 +210,8 @@ function var_color(name) {
 function render() {
   if (!snapshots.length) return;
 
+  initBaselines(snapshots[0]);
+
   const latest = snapshots[snapshots.length - 1];
   const prev = snapshots.length > 1 ? snapshots[snapshots.length - 2] : null;
 
@@ -271,21 +274,22 @@ function render() {
 
   // LNG/Gas cards
   const lngDefs = [
-    { key: 'lng_gas_total', label: 'LNG/Gas Carriers', color: '#a78bfa', baseline: 76 },
-    { key: 'lng_gas_stuck', label: 'LNG Stuck (<2kn)', color: '#ef4444', baseline: 8 },
-    { key: 'lng_gas_transiting', label: 'LNG Transiting Strait', color: '#22c55e', baseline: 12 },
-    { key: 'lng_gas_anchored_fujairah', label: 'LNG @ Fujairah', color: '#f97316', baseline: 2 },
-    { key: 'lng_gas_inside_gulf', label: 'LNG Trapped in Gulf', color: '#ec4899', baseline: 3 },
-    { key: 'lng_gas_queue_oman', label: 'LNG Queue (Oman)', color: '#a855f7', baseline: 2 },
-    { key: 'qatar_bound', label: 'Qatar-Bound', color: '#06b6d4', baseline: 15 },
-    { key: 'qatar_bound_stuck', label: 'Qatar-Bound Stuck', color: '#f59e0b', baseline: 1 },
+    { key: 'lng_gas_total', label: 'LNG/Gas Carriers', color: '#a78bfa' },
+    { key: 'lng_gas_stuck', label: 'LNG Stuck (<2kn)', color: '#ef4444' },
+    { key: 'lng_gas_transiting', label: 'LNG Transiting Strait', color: '#22c55e' },
+    { key: 'lng_gas_anchored_fujairah', label: 'LNG @ Fujairah', color: '#f97316' },
+    { key: 'lng_gas_inside_gulf', label: 'LNG Trapped in Gulf', color: '#ec4899' },
+    { key: 'lng_gas_queue_oman', label: 'LNG Queue (Oman)', color: '#a855f7' },
+    { key: 'qatar_bound', label: 'Qatar-Bound', color: '#06b6d4' },
+    { key: 'qatar_bound_stuck', label: 'Qatar-Bound Stuck', color: '#f59e0b' },
   ];
   const lngEl = document.getElementById('lngCards');
   lngEl.innerHTML = '';
   for (const def of lngDefs) {
     const val = latest[def.key] || 0;
     const prev2 = snapshots.length > 1 ? (snapshots[snapshots.length - 2][def.key] || 0) : null;
-    const ratio = def.baseline > 0 ? (val / def.baseline) : 0;
+    const baseline = (BASELINES[def.key] || {}).normal || val;
+    const ratio = baseline > 0 ? (val / baseline) : 0;
     let deltaHtml = '<span style="color:#64748b;font-size:11px">first snapshot</span>';
     if (prev2 !== null) {
       const d = val - prev2;
@@ -299,7 +303,7 @@ function render() {
       <div style="font-size:28px;font-weight:800;color:${def.color};line-height:1.2">${val}</div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:2px">
         ${deltaHtml}
-        <span style="color:${ratioColor};font-size:10px;font-weight:700">${ratio.toFixed(1)}x normal</span>
+        <span style="color:${ratioColor};font-size:10px;font-weight:700">${ratio.toFixed(1)}x baseline</span>
       </div>
     </div>`;
   }
@@ -340,18 +344,32 @@ function render() {
 // Chart instances
 let charts = {};
 
-// Pre-crisis baseline estimates (normal Hormuz traffic)
-// Sources: MarineTraffic historical, EIA, Kpler, Lloyd's List
-const BASELINES = {
-  fujairah_anchored:  { normal: 20, label: 'Fujairah Anchored', unit: 'tankers', note: 'Normal anchorage ~15-25 tankers waiting for berth/orders' },
-  inside_gulf_stuck:  { normal: 50, label: 'Inside Gulf Slow/Stopped', unit: 'tankers', note: 'Normal port ops + loading at Ras Tanura, Jubail, Mina al-Ahmadi' },
-  strait_transiting:  { normal: 55, label: 'Strait Transiting', unit: 'tankers', note: '~50-60 tanker transits/day (EIA: 21M bpd flow, avg VLCC 2M bbl)' },
-  gulf_oman_queue:    { normal: 30, label: 'Gulf of Oman Queue', unit: 'tankers', note: 'Normally just passing through, not queuing' },
-  zero_speed_tankers: { normal: 80, label: 'Zero Speed Tankers', unit: 'tankers', note: 'Normal idle: STS ops, lightering, waiting orders' },
-  iran_flagged:       { normal: 180, label: 'Iran-Flagged', unit: 'vessels', note: 'NITC fleet ~70 tankers + coastal/fishing. Clustering = mobilization signal' },
-  avg_strait_speed:   { normal: 12.5, label: 'Avg Strait Speed', unit: 'kn', note: 'Normal transit speed 10-15 kn through TSS lanes' },
-  crisis_severity:    { normal: 100, label: 'Severity Score', unit: 'pts', note: 'Baseline ~80-120 during peacetime (some ships always slow/stopped)' },
-};
+// Pre-crisis baseline = first snapshot (measured reference point)
+// Automatically set from the first data point in hormuz-metrics.jsonl
+let BASELINES = {};
+let BASELINE_DATE = '';
+
+function initBaselines(firstSnapshot) {
+  BASELINE_DATE = new Date(firstSnapshot.timestamp).toLocaleString();
+  BASELINES = {
+    fujairah_anchored:  { normal: firstSnapshot.fujairah_anchored, label: 'Fujairah Anchored', unit: 'tankers', note: 'Ships parking outside Hormuz when strait is blocked' },
+    inside_gulf_stuck:  { normal: firstSnapshot.inside_gulf_stuck, label: 'Inside Gulf Stuck', unit: 'tankers', note: 'Trapped in Persian Gulf — cannot exit through Hormuz' },
+    strait_transiting:  { normal: firstSnapshot.strait_transiting, label: 'Strait Transiting', unit: 'tankers', note: 'Actively passing through Hormuz chokepoint (>3 kn)' },
+    gulf_oman_queue:    { normal: firstSnapshot.gulf_oman_queue, label: 'Gulf of Oman Queue', unit: 'tankers', note: 'Queuing outside Hormuz — waiting for transit or diverting' },
+    zero_speed_tankers: { normal: firstSnapshot.zero_speed_tankers, label: 'Zero Speed Tankers', unit: 'tankers', note: 'Dead stop — STS ops, lightering, or unable to proceed' },
+    iran_flagged:       { normal: firstSnapshot.iran_flagged, label: 'Iran-Flagged', unit: 'vessels', note: 'NITC fleet + coastal. Clustering = mobilization signal' },
+    avg_strait_speed:   { normal: firstSnapshot.avg_strait_speed, label: 'Avg Strait Speed', unit: 'kn', note: 'Average transit speed through strait TSS lanes' },
+    crisis_severity:    { normal: firstSnapshot.crisis_severity, label: 'Severity Score', unit: 'pts', note: 'Composite disruption index — higher = worse' },
+    lng_gas_total:      { normal: firstSnapshot.lng_gas_total || 76, label: 'LNG/Gas Total', unit: 'carriers', note: 'Total LNG/LPG/Gas carriers in monitored region' },
+    lng_gas_stuck:      { normal: firstSnapshot.lng_gas_stuck || 56, label: 'LNG Stuck', unit: 'carriers', note: 'LNG carriers moving <2 kn — effectively stopped' },
+    lng_gas_transiting: { normal: firstSnapshot.lng_gas_transiting || 1, label: 'LNG Transiting', unit: 'carriers', note: 'LNG carriers actively transiting strait (>3 kn)' },
+    lng_gas_anchored_fujairah: { normal: firstSnapshot.lng_gas_anchored_fujairah || 8, label: 'LNG @ Fujairah', unit: 'carriers', note: 'LNG carriers anchored at Fujairah' },
+    lng_gas_inside_gulf: { normal: firstSnapshot.lng_gas_inside_gulf || 9, label: 'LNG Inside Gulf', unit: 'carriers', note: 'LNG carriers trapped inside Persian Gulf' },
+    lng_gas_queue_oman: { normal: firstSnapshot.lng_gas_queue_oman || 5, label: 'LNG Queue Oman', unit: 'carriers', note: 'LNG carriers queuing in Gulf of Oman' },
+    qatar_bound:        { normal: firstSnapshot.qatar_bound || 4, label: 'Qatar-Bound', unit: 'vessels', note: 'Vessels heading to/from Ras Laffan, Mesaieed' },
+    qatar_bound_stuck:  { normal: firstSnapshot.qatar_bound_stuck || 3, label: 'Qatar-Bound Stuck', unit: 'vessels', note: 'Qatar-bound vessels unable to proceed' },
+  };
+}
 
 function renderLngChart() {
   if (charts.lng) charts.lng.destroy();
@@ -665,7 +683,7 @@ function renderRatioChart() {
         y: {
           grid: { color: '#1e293b' },
           ticks: { color: '#94a3b8', callback: function(v) { return v.toFixed(1) + 'x'; } },
-          title: { display: true, text: 'Ratio vs Pre-Crisis Normal (1.0x = normal)', color: '#94a3b8', font: { size: 11 } },
+          title: { display: true, text: 'Ratio vs Baseline (1.0x = first measurement)', color: '#94a3b8', font: { size: 11 } },
           suggestedMin: 0
         }
       },
@@ -673,11 +691,11 @@ function renderRatioChart() {
         legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10, family: 'SF Mono, monospace' }, usePointStyle: true, pointStyle: 'line', padding: 12 } },
         tooltip: {
           backgroundColor: '#1e293b', titleColor: '#e2e8f0', bodyColor: '#94a3b8', borderColor: '#334155', borderWidth: 1,
-          callbacks: { label: function(ctx) { return ctx.dataset.label.split(' (')[0] + ': ' + ctx.raw.toFixed(2) + 'x normal'; } }
+          callbacks: { label: function(ctx) { return ctx.dataset.label.split(' (')[0] + ': ' + ctx.raw.toFixed(2) + 'x baseline'; } }
         },
         annotation: {
           annotations: {
-            baseline: { type: 'line', yMin: 1, yMax: 1, borderColor: '#64748b', borderWidth: 2, borderDash: [8, 4], label: { display: true, content: '1.0x NORMAL', color: '#94a3b8', backgroundColor: 'transparent', font: { size: 10 }, position: 'start' } }
+            baseline: { type: 'line', yMin: 1, yMax: 1, borderColor: '#64748b', borderWidth: 2, borderDash: [8, 4], label: { display: true, content: '1.0x BASELINE', color: '#94a3b8', backgroundColor: 'transparent', font: { size: 10 }, position: 'start' } }
           }
         }
       }
@@ -687,6 +705,8 @@ function renderRatioChart() {
 
 function renderBaselineTable() {
   const el = document.getElementById('baselineTable');
+  const dateEl = document.getElementById('baselineDate');
+  if (dateEl) dateEl.textContent = 'Baseline measured: ' + BASELINE_DATE + ' (first AIS snapshot)';
   const latest = snapshots[snapshots.length - 1];
   let html = '';
   for (const [key, b] of Object.entries(BASELINES)) {
@@ -708,7 +728,7 @@ function renderBaselineTable() {
       <div style="margin-top:4px;font-size:12px">
         <span style="color:${color}">${arrow} ${Math.abs(pct).toFixed(0)}%</span>
         <span style="color:${rColor};margin-left:8px;font-weight:700">${ratio.toFixed(1)}x</span>
-        <span style="color:#475569;font-size:10px;margin-left:4px">vs normal</span>
+        <span style="color:#475569;font-size:10px;margin-left:4px">vs baseline</span>
       </div>
       <div style="color:#475569;font-size:10px;margin-top:4px">${b.note}</div>
     </div>`;
