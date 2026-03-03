@@ -93,6 +93,10 @@
 <div class="grid" id="cards"></div>
 
 <div class="charts">
+  <div class="chart-box wide" style="height:400px">
+    <h3>📈 All Metrics Timeline</h3>
+    <canvas id="allMetricsChart"></canvas>
+  </div>
   <div class="chart-box wide">
     <h3>🔴 Crisis Severity Score Over Time</h3>
     <canvas id="severityChart"></canvas>
@@ -239,6 +243,7 @@ function render() {
   const zoneTotal = zoneData.reduce((s, z) => s + z.val, 0);
 
   // Charts
+  renderAllMetricsChart();
   renderSeverityChart();
   renderZoneChart(zoneData);
   renderFlowChart();
@@ -258,6 +263,71 @@ function render() {
 
 // Chart instances
 let charts = {};
+
+function renderAllMetricsChart() {
+  if (charts.allMetrics) charts.allMetrics.destroy();
+  const ctx = document.getElementById('allMetricsChart').getContext('2d');
+  const labels = snapshots.map(s => new Date(s.timestamp));
+
+  // Left Y axis: vessel counts (0-400+)
+  // Right Y axis: severity score (0-1200+) and speed (0-15)
+  const datasets = [
+    { label: 'Fujairah Anchored', data: snapshots.map(s => s.fujairah_anchored), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
+    { label: 'Inside Gulf Stuck', data: snapshots.map(s => s.inside_gulf_stuck), borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
+    { label: 'Gulf of Oman Queue', data: snapshots.map(s => s.gulf_oman_queue), borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
+    { label: 'Zero Speed Tankers', data: snapshots.map(s => s.zero_speed_tankers), borderColor: '#ec4899', backgroundColor: 'rgba(236,72,153,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
+    { label: 'Iran-Flagged', data: snapshots.map(s => s.iran_flagged), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.08)', fill: false, borderWidth: 2, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
+    { label: 'Strait Transiting', data: snapshots.map(s => s.strait_transiting), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
+    { label: 'Severity Score', data: snapshots.map(s => s.crisis_severity), borderColor: '#ff2222', backgroundColor: 'rgba(255,34,34,0.05)', fill: true, borderWidth: 3, pointRadius: 5, tension: 0.3, borderDash: [6, 3], yAxisID: 'y1' },
+    { label: 'Avg Speed (kn)', data: snapshots.map(s => s.avg_strait_speed), borderColor: '#06b6d4', fill: false, borderWidth: 2, pointRadius: 4, tension: 0.3, borderDash: [3, 3], yAxisID: 'y2' },
+  ];
+
+  charts.allMetrics = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          type: snapshots.length > 1 ? 'time' : 'category',
+          time: { tooltipFormat: 'MMM d, HH:mm', displayFormats: { hour: 'MMM d HH:mm', day: 'MMM d' } },
+          grid: { color: '#1e293b' },
+          ticks: { color: '#94a3b8', font: { family: 'SF Mono, monospace', size: 10 }, maxRotation: 45 }
+        },
+        y: {
+          position: 'left', grid: { color: '#1e293b' },
+          ticks: { color: '#94a3b8' },
+          title: { display: true, text: 'Vessel Count', color: '#94a3b8', font: { size: 11 } },
+          suggestedMin: 0
+        },
+        y1: {
+          position: 'right', grid: { display: false },
+          ticks: { color: '#ff2222' },
+          title: { display: true, text: 'Severity', color: '#ff2222', font: { size: 11 } },
+          suggestedMin: 0
+        },
+        y2: {
+          position: 'right', grid: { display: false },
+          ticks: { color: '#06b6d4', callback: function(v) { return v + ' kn'; } },
+          title: { display: true, text: 'Speed', color: '#06b6d4', font: { size: 11 } },
+          suggestedMin: 0, suggestedMax: 15
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#94a3b8', font: { size: 11, family: 'SF Mono, monospace' }, usePointStyle: true, pointStyle: 'line', padding: 16 }
+        },
+        tooltip: {
+          backgroundColor: '#1e293b', titleColor: '#e2e8f0', bodyColor: '#94a3b8',
+          borderColor: '#334155', borderWidth: 1,
+          callbacks: { label: function(ctx) { return ctx.dataset.label + ': ' + (typeof ctx.raw === 'number' ? ctx.raw.toFixed(1) : ctx.raw); } }
+        }
+      }
+    }
+  });
+}
 
 function renderSeverityChart() {
   if (charts.severity) charts.severity.destroy();
