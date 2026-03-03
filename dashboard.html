@@ -50,9 +50,9 @@
   .charts { padding: 12px 32px 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .chart-box {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 20px; min-height: 300px;
+    padding: 20px; height: 340px; position: relative;
   }
-  .chart-box.wide { grid-column: 1 / -1; }
+  .chart-box.wide { grid-column: 1 / -1; height: 280px; }
   .chart-box h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 12px; }
 
   .zone-bar { display: flex; height: 40px; border-radius: 6px; overflow: hidden; margin: 8px 0; }
@@ -286,7 +286,7 @@ function renderSeverityChart() {
       }
     }
   });
-  document.getElementById('severityChart').parentElement.style.height = '250px';
+
 }
 
 function renderZoneChart(zoneData) {
