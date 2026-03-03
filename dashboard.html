@@ -50,8 +50,9 @@
   .charts { padding: 12px 32px 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .chart-box {
     background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-    padding: 20px; height: 340px; position: relative;
+    padding: 20px; height: 340px; position: relative; overflow: hidden;
   }
+  .chart-box canvas { max-height: 100% !important; }
   .chart-box.wide { grid-column: 1 / -1; height: 280px; }
   .chart-box h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 12px; }
 
