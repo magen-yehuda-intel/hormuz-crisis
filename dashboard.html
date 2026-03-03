@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hormuz Crisis Tracker — Live AIS Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 <style>
   :root {
@@ -116,6 +117,18 @@
   <div class="chart-box">
     <h3>🏳️ Iran-Flagged Vessels</h3>
     <canvas id="iranChart"></canvas>
+  </div>
+  <div class="chart-box wide" style="height:380px">
+    <h3>📊 Crisis Ratio vs Pre-Crisis Baseline</h3>
+    <canvas id="ratioChart"></canvas>
+  </div>
+</div>
+
+<!-- Baseline reference panel -->
+<div style="max-width:1440px;margin:16px auto;padding:0 20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px">
+    <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:12px">📋 Pre-Crisis Baselines (Normal Hormuz Traffic)</h3>
+    <div id="baselineTable" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;font-size:13px"></div>
   </div>
 </div>
 
@@ -249,6 +262,8 @@ function render() {
   renderFlowChart();
   renderStraitChart();
   renderIranChart();
+  renderRatioChart();
+  renderBaselineTable();
 
   // Status strip
   const ts = new Date(latest.timestamp);
@@ -263,6 +278,19 @@ function render() {
 
 // Chart instances
 let charts = {};
+
+// Pre-crisis baseline estimates (normal Hormuz traffic)
+// Sources: MarineTraffic historical, EIA, Kpler, Lloyd's List
+const BASELINES = {
+  fujairah_anchored:  { normal: 20, label: 'Fujairah Anchored', unit: 'tankers', note: 'Normal anchorage ~15-25 tankers waiting for berth/orders' },
+  inside_gulf_stuck:  { normal: 50, label: 'Inside Gulf Slow/Stopped', unit: 'tankers', note: 'Normal port ops + loading at Ras Tanura, Jubail, Mina al-Ahmadi' },
+  strait_transiting:  { normal: 55, label: 'Strait Transiting', unit: 'tankers', note: '~50-60 tanker transits/day (EIA: 21M bpd flow, avg VLCC 2M bbl)' },
+  gulf_oman_queue:    { normal: 30, label: 'Gulf of Oman Queue', unit: 'tankers', note: 'Normally just passing through, not queuing' },
+  zero_speed_tankers: { normal: 80, label: 'Zero Speed Tankers', unit: 'tankers', note: 'Normal idle: STS ops, lightering, waiting orders' },
+  iran_flagged:       { normal: 180, label: 'Iran-Flagged', unit: 'vessels', note: 'NITC fleet ~70 tankers + coastal/fishing. Clustering = mobilization signal' },
+  avg_strait_speed:   { normal: 12.5, label: 'Avg Strait Speed', unit: 'kn', note: 'Normal transit speed 10-15 kn through TSS lanes' },
+  crisis_severity:    { normal: 100, label: 'Severity Score', unit: 'pts', note: 'Baseline ~80-120 during peacetime (some ships always slow/stopped)' },
+};
 
 function renderAllMetricsChart() {
   if (charts.allMetrics) charts.allMetrics.destroy();
@@ -486,6 +514,105 @@ function renderIranChart() {
       plugins: { legend: { display: false } }
     }
   });
+}
+
+function renderRatioChart() {
+  if (charts.ratio) charts.ratio.destroy();
+  const ctx = document.getElementById('ratioChart').getContext('2d');
+  const labels = snapshots.map(s => new Date(s.timestamp));
+
+  const metrics = [
+    { key: 'fujairah_anchored', color: '#ef4444' },
+    { key: 'inside_gulf_stuck', color: '#f97316' },
+    { key: 'strait_transiting', color: '#22c55e', invert: true },
+    { key: 'gulf_oman_queue', color: '#a855f7' },
+    { key: 'zero_speed_tankers', color: '#ec4899' },
+    { key: 'iran_flagged', color: '#f59e0b' },
+    { key: 'avg_strait_speed', color: '#06b6d4', invert: true },
+    { key: 'crisis_severity', color: '#ff2222' },
+  ];
+
+  const datasets = metrics.map(m => {
+    const b = BASELINES[m.key];
+    return {
+      label: b.label + (m.invert ? ' (inverted — lower = worse)' : ''),
+      data: snapshots.map(s => {
+        const ratio = (s[m.key] / b.normal);
+        return Math.round(ratio * 100) / 100;
+      }),
+      borderColor: m.color,
+      borderWidth: 2.5,
+      pointRadius: 4,
+      tension: 0.3,
+      fill: false,
+    };
+  });
+
+  charts.ratio = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: {
+          type: snapshots.length > 1 ? 'time' : 'category',
+          time: { tooltipFormat: 'MMM d, HH:mm', displayFormats: { hour: 'MMM d HH:mm' } },
+          grid: { color: '#1e293b' },
+          ticks: { color: '#94a3b8', font: { size: 10 } }
+        },
+        y: {
+          grid: { color: '#1e293b' },
+          ticks: { color: '#94a3b8', callback: function(v) { return v.toFixed(1) + 'x'; } },
+          title: { display: true, text: 'Ratio vs Pre-Crisis Normal (1.0x = normal)', color: '#94a3b8', font: { size: 11 } },
+          suggestedMin: 0
+        }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10, family: 'SF Mono, monospace' }, usePointStyle: true, pointStyle: 'line', padding: 12 } },
+        tooltip: {
+          backgroundColor: '#1e293b', titleColor: '#e2e8f0', bodyColor: '#94a3b8', borderColor: '#334155', borderWidth: 1,
+          callbacks: { label: function(ctx) { return ctx.dataset.label.split(' (')[0] + ': ' + ctx.raw.toFixed(2) + 'x normal'; } }
+        },
+        annotation: {
+          annotations: {
+            baseline: { type: 'line', yMin: 1, yMax: 1, borderColor: '#64748b', borderWidth: 2, borderDash: [8, 4], label: { display: true, content: '1.0x NORMAL', color: '#94a3b8', backgroundColor: 'transparent', font: { size: 10 }, position: 'start' } }
+          }
+        }
+      }
+    }
+  });
+}
+
+function renderBaselineTable() {
+  const el = document.getElementById('baselineTable');
+  const latest = snapshots[snapshots.length - 1];
+  let html = '';
+  for (const [key, b] of Object.entries(BASELINES)) {
+    const current = latest[key];
+    const ratio = current / b.normal;
+    const pct = ((ratio - 1) * 100);
+    const isUp = current > b.normal;
+    const isBad = key === 'avg_strait_speed' || key === 'strait_transiting' ? !isUp : isUp;
+    const arrow = isUp ? '▲' : '▼';
+    const color = isBad ? '#ef4444' : '#22c55e';
+    const rColor = ratio > 3 ? '#ef4444' : ratio > 2 ? '#f97316' : ratio > 1.5 ? '#f59e0b' : '#94a3b8';
+
+    html += `<div style="background:#0f172a;padding:12px;border-radius:8px;border-left:3px solid ${color}">
+      <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:1px">${b.label}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:4px">
+        <span style="font-size:20px;font-weight:800;color:${color}">${typeof current === 'number' && key === 'avg_strait_speed' ? current.toFixed(1) : current}</span>
+        <span style="color:#64748b;font-size:12px">baseline: ${b.normal} ${b.unit}</span>
+      </div>
+      <div style="margin-top:4px;font-size:12px">
+        <span style="color:${color}">${arrow} ${Math.abs(pct).toFixed(0)}%</span>
+        <span style="color:${rColor};margin-left:8px;font-weight:700">${ratio.toFixed(1)}x</span>
+        <span style="color:#475569;font-size:10px;margin-left:4px">vs normal</span>
+      </div>
+      <div style="color:#475569;font-size:10px;margin-top:4px">${b.note}</div>
+    </div>`;
+  }
+  el.innerHTML = html;
 }
 
 // ── INIT ──
