@@ -92,6 +92,24 @@ def is_tanker(vessel):
     return False
 
 
+def is_lng_gas_carrier(vessel):
+    """Identify LNG/LPG/Gas carriers by GT_SHIPTYPE, name, or destination."""
+    gt = str(vessel.get("GT_SHIPTYPE", ""))
+    name = str(vessel.get("SHIPNAME", "")).upper()
+    # GT_SHIPTYPE: 75=LNG Tanker, 18=LNG (MT convention varies), 19=LPG, 195=Gas
+    if gt in ("75", "18", "19", "195"):
+        return True
+    if any(x in name for x in ["LNG", "GAS", "METHANE", "ARCTIC"]):
+        return True
+    return False
+
+
+def is_qatar_related(vessel):
+    """Vessel heading to/from Qatar LNG terminals."""
+    dest = str(vessel.get("DESTINATION", "")).upper()
+    return any(x in dest for x in ["QATAR", "RAS LAFFAN", "MESAIEED", "DOHA", "QALHAT"])
+
+
 def compute_metrics(vessels):
     ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
     metrics = {
@@ -106,6 +124,10 @@ def compute_metrics(vessels):
         "iran_flagged": 0, "fujairah_destination": 0,
         "avg_strait_speed": 0.0, "zero_speed_tankers": 0,
         "zones": {"strait": 0, "fujairah": 0, "inside_gulf": 0, "gulf_oman": 0, "arabian_sea": 0, "other": 0},
+        # LNG/Gas specific
+        "lng_gas_total": 0, "lng_gas_stuck": 0, "lng_gas_transiting": 0,
+        "lng_gas_anchored_fujairah": 0, "lng_gas_inside_gulf": 0,
+        "lng_gas_queue_oman": 0, "qatar_bound": 0, "qatar_bound_stuck": 0,
     }
 
     strait_speeds = []
@@ -134,6 +156,26 @@ def compute_metrics(vessels):
             metrics["fujairah_destination"] += 1
         if speed_kn < 0.1 and tanker:
             metrics["zero_speed_tankers"] += 1
+
+        # LNG/Gas carrier tracking
+        lng = is_lng_gas_carrier(v)
+        if lng:
+            metrics["lng_gas_total"] += 1
+            if speed_kn < 2.0:
+                metrics["lng_gas_stuck"] += 1
+            if zone == "strait" and speed_kn > 3.0:
+                metrics["lng_gas_transiting"] += 1
+            elif zone == "fujairah" and speed_kn < 1.5:
+                metrics["lng_gas_anchored_fujairah"] += 1
+            elif zone == "inside_gulf" and speed_kn < 2.0:
+                metrics["lng_gas_inside_gulf"] += 1
+            elif zone == "gulf_oman" and speed_kn < 2.0:
+                metrics["lng_gas_queue_oman"] += 1
+
+        if is_qatar_related(v):
+            metrics["qatar_bound"] += 1
+            if speed_kn < 2.0:
+                metrics["qatar_bound_stuck"] += 1
 
         if not tanker:
             continue
