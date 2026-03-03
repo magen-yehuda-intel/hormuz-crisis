@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hormuz Crisis Tracker — Live AIS Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0e17; --surface: #111827; --border: #1e293b;
+    --text: #e2e8f0; --muted: #94a3b8; --accent: #f59e0b;
+    --red: #ef4444; --green: #22c55e; --blue: #3b82f6; --cyan: #06b6d4;
+    --orange: #f97316; --purple: #a855f7; --pink: #ec4899;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'SF Mono', 'Fira Code', monospace; }
+
+  .header {
+    background: linear-gradient(135deg, #1a0a0a 0%, #0a0e17 50%, #0a1a0a 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 24px 32px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+  }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  .header h1 span { color: var(--red); }
+  .header .meta { color: var(--muted); font-size: 13px; }
+  .header .severity {
+    font-size: 48px; font-weight: 900; line-height: 1;
+    text-shadow: 0 0 30px currentColor;
+  }
+  .severity.critical { color: var(--red); }
+  .severity.high { color: var(--orange); }
+  .severity.elevated { color: var(--accent); }
+  .severity.normal { color: var(--green); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 20px 32px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 20px; position: relative; overflow: hidden;
+  }
+  .card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 6px; }
+  .card .value { font-size: 32px; font-weight: 800; line-height: 1.1; }
+  .card .delta { font-size: 13px; margin-top: 4px; }
+  .card .delta.up { color: var(--red); }
+  .card .delta.down { color: var(--green); }
+  .card .delta.flat { color: var(--muted); }
+  .card .sparkline { position: absolute; bottom: 0; left: 0; right: 0; height: 40px; opacity: 0.3; }
+
+  .charts { padding: 12px 32px 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .chart-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; min-height: 300px;
+  }
+  .chart-box.wide { grid-column: 1 / -1; }
+  .chart-box h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 12px; }
+
+  .zone-bar { display: flex; height: 40px; border-radius: 6px; overflow: hidden; margin: 8px 0; }
+  .zone-bar div { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #000; min-width: 30px; transition: width 0.5s; }
+
+  .status-strip {
+    background: var(--surface); border-top: 1px solid var(--border);
+    padding: 12px 32px; display: flex; gap: 24px; flex-wrap: wrap;
+    font-size: 12px; color: var(--muted);
+  }
+  .status-strip b { color: var(--text); }
+
+  .no-data { text-align: center; padding: 80px 32px; color: var(--muted); font-size: 18px; }
+  .no-data p { margin-top: 12px; font-size: 14px; }
+
+  @media (max-width: 768px) {
+    .charts { grid-template-columns: 1fr; }
+    .header { padding: 16px; }
+    .grid { padding: 12px 16px; }
+    .charts { padding: 12px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>⚓ HORMUZ <span>CRISIS</span> TRACKER</h1>
+    <div class="meta">Live AIS vessel intelligence • MarineTraffic data</div>
+  </div>
+  <div style="text-align:right">
+    <div class="severity" id="severityScore">—</div>
+    <div class="meta">SEVERITY SCORE</div>
+  </div>
+</div>
+
+<div class="grid" id="cards"></div>
+
+<div class="charts">
+  <div class="chart-box wide">
+    <h3>🔴 Crisis Severity Score Over Time</h3>
+    <canvas id="severityChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <h3>📊 Zone Distribution (Tankers)</h3>
+    <canvas id="zoneChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <h3>🚢 Tanker Flow — Stuck vs Moving</h3>
+    <canvas id="flowChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <h3>⚡ Strait Activity</h3>
+    <canvas id="straitChart"></canvas>
+  </div>
+  <div class="chart-box">
+    <h3>🏳️ Iran-Flagged Vessels</h3>
+    <canvas id="iranChart"></canvas>
+  </div>
+</div>
+
+<div class="status-strip" id="statusStrip"></div>
+
+<script>
+// ── DATA ──
+// Paste JSONL snapshots here or load from file
+// Each line is one JSON snapshot from hormuz-tracker.py
+const METRICS_JSONL = `__METRICS_JSONL__`;
+
+let snapshots = [];
+try {
+  // Try loading from embedded data
+  if (METRICS_JSONL && !METRICS_JSONL.includes('__METRICS')) {
+    snapshots = METRICS_JSONL.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+  }
+} catch(e) { console.error('Parse error:', e); }
+
+// Also try loading from metrics file via fetch (local dev)
+async function tryFetchMetrics() {
+  try {
+    const r = await fetch('hormuz-metrics.jsonl');
+    if (r.ok) {
+      const text = await r.text();
+      const fetched = text.trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+      if (fetched.length > snapshots.length) {
+        snapshots = fetched;
+        render();
+      }
+    }
+  } catch(e) {}
+}
+
+// ── CARD DEFINITIONS ──
+const CARD_DEFS = [
+  { key: 'total_tankers', label: 'Total Tankers', color: var_color('blue') },
+  { key: 'fujairah_anchored', label: 'Fujairah Anchored', color: var_color('red'), bad: 'up' },
+  { key: 'inside_gulf_stuck', label: 'Inside Gulf Stuck', color: var_color('orange'), bad: 'up' },
+  { key: 'strait_transiting', label: 'Strait Transiting', color: var_color('green'), bad: 'down' },
+  { key: 'gulf_oman_queue', label: 'Gulf of Oman Queue', color: var_color('purple'), bad: 'up' },
+  { key: 'zero_speed_tankers', label: 'Zero Speed Tankers', color: var_color('pink'), bad: 'up' },
+  { key: 'iran_flagged', label: 'Iran-Flagged', color: var_color('accent'), bad: 'up' },
+  { key: 'avg_strait_speed', label: 'Avg Strait Speed (kn)', color: var_color('cyan'), bad: 'down', decimals: 1 },
+];
+
+function var_color(name) {
+  const map = { red:'#ef4444', green:'#22c55e', blue:'#3b82f6', cyan:'#06b6d4',
+    orange:'#f97316', purple:'#a855f7', pink:'#ec4899', accent:'#f59e0b' };
+  return map[name] || '#e2e8f0';
+}
+
+// ── RENDER ──
+function render() {
+  if (!snapshots.length) return;
+
+  const latest = snapshots[snapshots.length - 1];
+  const prev = snapshots.length > 1 ? snapshots[snapshots.length - 2] : null;
+
+  // Severity score
+  const sEl = document.getElementById('severityScore');
+  const sev = latest.crisis_severity;
+  sEl.textContent = sev.toFixed(0);
+  sEl.className = 'severity ' + (sev > 800 ? 'critical' : sev > 500 ? 'high' : sev > 200 ? 'elevated' : 'normal');
+
+  // Cards
+  const cardsEl = document.getElementById('cards');
+  cardsEl.innerHTML = '';
+  for (const def of CARD_DEFS) {
+    const val = latest[def.key];
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.borderLeftColor = def.color;
+    card.style.borderLeftWidth = '3px';
+
+    let deltaHtml = '';
+    if (prev && prev[def.key] !== undefined) {
+      const diff = val - prev[def.key];
+      if (diff !== 0) {
+        const arrow = diff > 0 ? '▲' : '▼';
+        const cls = def.bad === 'up' ? (diff > 0 ? 'up' : 'down') : (diff < 0 ? 'up' : 'down');
+        const dispDiff = def.decimals ? diff.toFixed(def.decimals) : diff;
+        deltaHtml = `<div class="delta ${cls}">${arrow} ${Math.abs(dispDiff)} vs prev</div>`;
+      } else {
+        deltaHtml = `<div class="delta flat">— no change</div>`;
+      }
+    } else if (snapshots.length === 1) {
+      deltaHtml = `<div class="delta flat">first snapshot</div>`;
+    }
+
+    // Mini sparkline SVG
+    const vals = snapshots.map(s => s[def.key]).filter(v => v !== undefined);
+    let sparkSvg = '';
+    if (vals.length > 1) {
+      const min = Math.min(...vals), max = Math.max(...vals);
+      const range = max - min || 1;
+      const pts = vals.map((v, i) => {
+        const x = (i / (vals.length - 1)) * 100;
+        const y = 40 - ((v - min) / range) * 35;
+        return `${x},${y}`;
+      }).join(' ');
+      sparkSvg = `<svg class="sparkline" viewBox="0 0 100 40" preserveAspectRatio="none">
+        <polyline fill="none" stroke="${def.color}" stroke-width="2" points="${pts}"/>
+      </svg>`;
+    }
+
+    const dispVal = def.decimals ? val.toFixed(def.decimals) : val;
+    card.innerHTML = `
+      <div class="label">${def.label}</div>
+      <div class="value" style="color:${def.color}">${dispVal}</div>
+      ${deltaHtml}
+      ${sparkSvg}
+    `;
+    cardsEl.appendChild(card);
+  }
+
+  // Zone stacked bar
+  const zoneData = [
+    { label: 'Fujairah', val: latest.fujairah_anchored, color: '#ef4444' },
+    { label: 'Inside Gulf', val: latest.inside_gulf_stuck, color: '#f97316' },
+    { label: 'Strait', val: latest.strait_transiting, color: '#22c55e' },
+    { label: 'Gulf Oman', val: latest.gulf_oman_queue, color: '#a855f7' },
+    { label: 'Arabian Sea', val: latest.arabian_sea_queue || 0, color: '#3b82f6' },
+  ];
+  const zoneTotal = zoneData.reduce((s, z) => s + z.val, 0);
+
+  // Charts
+  renderSeverityChart();
+  renderZoneChart(zoneData);
+  renderFlowChart();
+  renderStraitChart();
+  renderIranChart();
+
+  // Status strip
+  const ts = new Date(latest.timestamp);
+  document.getElementById('statusStrip').innerHTML = `
+    <span>Last snapshot: <b>${ts.toLocaleString()}</b></span>
+    <span>Snapshots: <b>${snapshots.length}</b></span>
+    <span>Total vessels: <b>${latest.total_vessels}</b></span>
+    <span>Fujairah-bound: <b>${latest.fujairah_destination}</b></span>
+    <span>Source: <b>MarineTraffic AIS</b></span>
+  `;
+}
+
+// Chart instances
+let charts = {};
+
+function renderSeverityChart() {
+  if (charts.severity) charts.severity.destroy();
+  const ctx = document.getElementById('severityChart').getContext('2d');
+  charts.severity = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: snapshots.map(s => new Date(s.timestamp)),
+      datasets: [{
+        label: 'Severity Score',
+        data: snapshots.map(s => s.crisis_severity),
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239,68,68,0.1)',
+        fill: true, tension: 0.3, pointRadius: snapshots.length < 20 ? 6 : 3,
+        pointBackgroundColor: '#ef4444', borderWidth: 3,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { type: snapshots.length > 1 ? 'time' : 'category', grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { family: 'SF Mono, monospace', size: 10 } } },
+        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' }, suggestedMin: 0 }
+      },
+      plugins: {
+        legend: { display: false },
+        annotation: snapshots.length === 1 ? undefined : undefined
+      }
+    }
+  });
+  document.getElementById('severityChart').parentElement.style.height = '250px';
+}
+
+function renderZoneChart(zoneData) {
+  if (charts.zone) charts.zone.destroy();
+  const ctx = document.getElementById('zoneChart').getContext('2d');
+
+  if (snapshots.length > 1) {
+    // Stacked area over time
+    const datasets = [
+      { label: 'Fujairah Anchored', key: 'fujairah_anchored', color: '#ef4444' },
+      { label: 'Inside Gulf Stuck', key: 'inside_gulf_stuck', color: '#f97316' },
+      { label: 'Strait Transiting', key: 'strait_transiting', color: '#22c55e' },
+      { label: 'Gulf of Oman Queue', key: 'gulf_oman_queue', color: '#a855f7' },
+      { label: 'Arabian Sea Queue', key: 'arabian_sea_queue', color: '#3b82f6' },
+    ];
+    charts.zone = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: snapshots.map(s => new Date(s.timestamp).toLocaleTimeString()),
+        datasets: datasets.map(d => ({
+          label: d.label,
+          data: snapshots.map(s => s[d.key] || 0),
+          backgroundColor: d.color + 'cc',
+        }))
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+          y: { stacked: true, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+        },
+        plugins: { legend: { labels: { color: '#94a3b8', font: { size: 10 } } } }
+      }
+    });
+  } else {
+    // Doughnut for single snapshot
+    charts.zone = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: zoneData.map(z => z.label),
+        datasets: [{ data: zoneData.map(z => z.val), backgroundColor: zoneData.map(z => z.color + 'cc'), borderWidth: 0 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '60%',
+        plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } } }
+      }
+    });
+  }
+}
+
+function renderFlowChart() {
+  if (charts.flow) charts.flow.destroy();
+  const ctx = document.getElementById('flowChart').getContext('2d');
+  const stuck = snapshots.map(s => (s.fujairah_anchored || 0) + (s.inside_gulf_stuck || 0) + (s.zero_speed_tankers || 0));
+  const moving = snapshots.map(s => (s.strait_transiting || 0) + (s.fujairah_moving || 0) + (s.inside_gulf_moving || 0) + (s.gulf_oman_moving || 0));
+
+  charts.flow = new Chart(ctx, {
+    type: snapshots.length > 1 ? 'line' : 'bar',
+    data: {
+      labels: snapshots.length > 1 ? snapshots.map(s => new Date(s.timestamp)) : ['Stuck/Anchored', 'Moving'],
+      datasets: snapshots.length > 1 ? [
+        { label: 'Stuck/Anchored', data: stuck, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3 },
+        { label: 'Moving', data: moving, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3 },
+      ] : [{
+        data: [stuck[0], moving[0]],
+        backgroundColor: ['#ef4444cc', '#22c55ecc'],
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { type: snapshots.length > 1 ? 'time' : 'category', grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+      },
+      plugins: { legend: { labels: { color: '#94a3b8' }, display: snapshots.length > 1 } }
+    }
+  });
+}
+
+function renderStraitChart() {
+  if (charts.strait) charts.strait.destroy();
+  const ctx = document.getElementById('straitChart').getContext('2d');
+  charts.strait = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: snapshots.map(s => new Date(s.timestamp)),
+      datasets: [
+        { label: 'Transiting', data: snapshots.map(s => s.strait_transiting), borderColor: '#22c55e', pointRadius: 5, tension: 0.3, yAxisID: 'y' },
+        { label: 'Avg Speed (kn)', data: snapshots.map(s => s.avg_strait_speed), borderColor: '#06b6d4', pointRadius: 5, tension: 0.3, yAxisID: 'y1', borderDash: [5, 5] },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { type: snapshots.length > 1 ? 'time' : 'category', grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+        y: { position: 'left', grid: { color: '#1e293b' }, ticks: { color: '#22c55e' }, title: { display: true, text: 'Ships', color: '#94a3b8' } },
+        y1: { position: 'right', grid: { display: false }, ticks: { color: '#06b6d4' }, title: { display: true, text: 'Knots', color: '#94a3b8' } }
+      },
+      plugins: { legend: { labels: { color: '#94a3b8' } } }
+    }
+  });
+}
+
+function renderIranChart() {
+  if (charts.iran) charts.iran.destroy();
+  const ctx = document.getElementById('iranChart').getContext('2d');
+  charts.iran = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: snapshots.map(s => new Date(s.timestamp)),
+      datasets: [{
+        label: 'Iran-Flagged',
+        data: snapshots.map(s => s.iran_flagged),
+        borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)',
+        fill: true, tension: 0.3, pointRadius: 5, borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { type: snapshots.length > 1 ? 'time' : 'category', grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' }, suggestedMin: 0 }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+// ── INIT ──
+render();
+tryFetchMetrics();
+// Auto-refresh every 60s if served locally
+setInterval(tryFetchMetrics, 60000);
+</script>
+</body>
+</html>
