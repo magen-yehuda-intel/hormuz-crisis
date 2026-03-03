@@ -144,6 +144,18 @@
   </div>
 </div>
 
+<!-- Zone Map -->
+<div style="max-width:1440px;margin:16px auto 0;padding:0 20px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;overflow:hidden">
+    <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:12px">🗺️ AIS Monitoring Zones — Live Vessel Density</h3>
+    <div id="zoneMap" style="height:500px;border-radius:8px;z-index:0"></div>
+    <div id="zoneMapLegend" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:12px;font-size:11px;color:#94a3b8"></div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <div class="status-strip" id="statusStrip"></div>
 
 <script>
@@ -312,6 +324,7 @@ function render() {
   renderIranChart();
   renderRatioChart();
   renderBaselineTable();
+  renderZoneMap();
 
   // Status strip
   const ts = new Date(latest.timestamp);
@@ -701,6 +714,134 @@ function renderBaselineTable() {
     </div>`;
   }
   el.innerHTML = html;
+}
+
+function renderZoneMap() {
+  if (window._zoneMap) window._zoneMap.remove();
+  const map = L.map('zoneMap', { zoomControl: true, scrollWheelZoom: true }).setView([25.0, 56.0], 7);
+  window._zoneMap = map;
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; CARTO',
+    maxZoom: 12
+  }).addTo(map);
+
+  // Zone definitions matching hormuz-tracker.py classify_zone()
+  const zones = [
+    {
+      name: 'Strait of Hormuz',
+      bounds: [[25.5, 55.8], [26.7, 57.2]],
+      color: '#22c55e',
+      key: 'strait',
+      desc: 'Transit chokepoint — normal ~55 tankers/day, 21M bpd oil + 15% global LNG'
+    },
+    {
+      name: 'Fujairah Anchorage',
+      bounds: [[24.8, 56.0], [25.6, 56.9]],
+      color: '#ef4444',
+      key: 'fujairah',
+      desc: 'Outside Hormuz — ships park here when strait is blocked'
+    },
+    {
+      name: 'Inside Gulf (Trapped)',
+      bounds: [[24.0, 48.0], [30.0, 55.8]],
+      color: '#f97316',
+      key: 'inside_gulf',
+      desc: 'Persian Gulf — Ras Tanura, Qatar, Kuwait, Bahrain. Ships cannot exit.'
+    },
+    {
+      name: 'Gulf of Oman (Queue)',
+      bounds: [[23.0, 56.5], [25.5, 60.5]],
+      color: '#a855f7',
+      key: 'gulf_oman',
+      desc: 'Waiting area outside Hormuz — ships queuing for transit or diverting'
+    },
+    {
+      name: 'Arabian Sea (Diverted)',
+      bounds: [[15.0, 57.0], [23.0, 65.0]],
+      color: '#3b82f6',
+      key: 'arabian_sea',
+      desc: 'Ships diverted or holding in open ocean, awaiting routing orders'
+    }
+  ];
+
+  const latest = snapshots[snapshots.length - 1];
+
+  // Zone metric counts for opacity scaling
+  const zoneCounts = {
+    strait: (latest.strait_transiting || 0) + (latest.strait_slow || 0),
+    fujairah: (latest.fujairah_anchored || 0) + (latest.fujairah_moving || 0),
+    inside_gulf: (latest.inside_gulf_stuck || 0) + (latest.inside_gulf_moving || 0),
+    gulf_oman: (latest.gulf_oman_queue || 0) + (latest.gulf_oman_moving || 0),
+    arabian_sea: latest.arabian_sea_queue || 0,
+  };
+  const maxCount = Math.max(...Object.values(zoneCounts), 1);
+
+  const legendEl = document.getElementById('zoneMapLegend');
+  legendEl.innerHTML = '';
+
+  zones.forEach(z => {
+    const count = zoneCounts[z.key] || 0;
+    // Opacity: min 0.15, max 0.6, scaled by vessel density
+    const opacity = 0.15 + (count / maxCount) * 0.45;
+
+    const rect = L.rectangle(z.bounds, {
+      color: z.color,
+      weight: 2,
+      fillColor: z.color,
+      fillOpacity: opacity,
+      dashArray: z.key === 'strait' ? '6,4' : null
+    }).addTo(map);
+
+    // Label
+    const center = [(z.bounds[0][0] + z.bounds[1][0]) / 2, (z.bounds[0][1] + z.bounds[1][1]) / 2];
+    const lngCount = latest['lng_gas_' + (z.key === 'fujairah' ? 'anchored_fujairah' : z.key === 'strait' ? 'transiting' : z.key === 'inside_gulf' ? 'inside_gulf' : z.key === 'gulf_oman' ? 'queue_oman' : '')] || 0;
+
+    const label = L.divIcon({
+      className: '',
+      html: `<div style="color:${z.color};font-family:SF Mono,monospace;font-size:12px;font-weight:800;text-shadow:0 0 8px #000,0 0 16px #000;white-space:nowrap;text-align:center;pointer-events:none">
+        ${z.name}<br>
+        <span style="font-size:18px">${count}</span> <span style="font-size:10px;opacity:0.7">vessels</span>
+        ${lngCount > 0 ? '<br><span style="font-size:10px;color:#a78bfa">🔥 ' + lngCount + ' LNG</span>' : ''}
+      </div>`,
+      iconSize: [200, 60],
+      iconAnchor: [100, 30]
+    });
+    L.marker(center, { icon: label, interactive: false }).addTo(map);
+
+    rect.bindPopup(`<div style="font-family:SF Mono,monospace;font-size:12px">
+      <b style="color:${z.color}">${z.name}</b><br>
+      <b>${count}</b> vessels total<br>
+      ${lngCount > 0 ? '<b style="color:#a78bfa">' + lngCount + '</b> LNG/Gas carriers<br>' : ''}
+      <span style="color:#888;font-size:10px">${z.desc}</span>
+    </div>`, { className: 'dark-popup' });
+
+    // Legend
+    legendEl.innerHTML += `<span style="display:inline-flex;align-items:center;gap:4px">
+      <span style="display:inline-block;width:14px;height:14px;background:${z.color};opacity:${opacity};border-radius:2px"></span>
+      ${z.name}: <b style="color:${z.color}">${count}</b>
+    </span>`;
+  });
+
+  // Add key locations
+  const markers = [
+    { lat: 26.1, lon: 56.3, name: 'Strait Chokepoint', icon: '⚓' },
+    { lat: 25.8, lon: 56.3, name: 'Greater/Lesser Tunb (Iran)', icon: '🇮🇷' },
+    { lat: 25.4, lon: 56.35, name: 'Fujairah Port', icon: '🏗️' },
+    { lat: 25.7, lon: 51.5, name: 'Ras Laffan (Qatar LNG)', icon: '🔥' },
+    { lat: 26.6, lon: 50.1, name: 'Ras Tanura (Saudi)', icon: '🛢️' },
+    { lat: 27.15, lon: 56.27, name: 'Bandar Abbas (IRGC)', icon: '⚠️' },
+    { lat: 25.0, lon: 55.1, name: 'Dubai/Jebel Ali', icon: '🏙️' },
+    { lat: 23.6, lon: 58.5, name: 'Muscat', icon: '🏙️' },
+  ];
+  markers.forEach(m => {
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="font-size:16px;text-shadow:0 0 6px #000">${m.icon}</div>`,
+      iconSize: [24, 24], iconAnchor: [12, 12]
+    });
+    L.marker([m.lat, m.lon], { icon }).addTo(map).bindTooltip(m.name, { direction: 'top', className: 'dark-tooltip' });
+  });
 }
 
 // ── INIT ──
