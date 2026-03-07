@@ -11,8 +11,8 @@
   :root {
     --bg: #0a0e17; --surface: #111827; --border: #1e293b;
     --text: #e2e8f0; --muted: #94a3b8; --accent: #f59e0b;
-    --red: #ef4444; --green: #22c55e; --blue: #3b82f6; --cyan: #06b6d4;
-    --orange: #f97316; --purple: #a855f7; --pink: #ec4899;
+    --red: #f87171; --green: #34d399; --blue: #60a5fa; --cyan: #22d3ee;
+    --orange: #fb923c; --purple: #c084fc; --pink: #f472b6;
   }
 
   /* Tooltips */
@@ -33,7 +33,7 @@
   body { background: var(--bg); color: var(--text); font-family: 'SF Mono', 'Fira Code', monospace; }
 
   .header {
-    background: linear-gradient(135deg, #1a0a0a 0%, #0a0e17 50%, #0a1a0a 100%);
+    background: linear-gradient(135deg, #1a0f10 0%, #0a0e17 50%, #0a1a0a 100%);
     border-bottom: 1px solid var(--border);
     padding: 24px 32px;
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
@@ -43,7 +43,7 @@
   .header .meta { color: var(--muted); font-size: 13px; }
   .header .severity {
     font-size: 48px; font-weight: 900; line-height: 1;
-    text-shadow: 0 0 30px currentColor;
+    text-shadow: 0 0 20px currentColor, 0 0 40px rgba(255,255,255,0.05);
   }
   .severity.critical { color: var(--red); }
   .severity.high { color: var(--orange); }
@@ -90,6 +90,8 @@
     .header { padding: 16px; }
     .grid { padding: 12px 16px; }
     .charts { padding: 12px 16px; }
+    #newsAlerts { grid-template-columns: 1fr !important; }
+    #newsAlerts + div { grid-template-columns: 1fr !important; }
   }
 </style>
 </head>
@@ -111,16 +113,306 @@
 
 <!-- LNG/Natural Gas Disruption Panel -->
 <div style="max-width:1440px;margin:16px auto 0;padding:0 20px">
-  <div style="background:linear-gradient(135deg,#0f172a 0%,#1a1033 100%);border:1px solid #7c3aed;border-radius:10px;padding:20px">
+  <div style="background:linear-gradient(135deg,#0f172a 0%,#1a1033 100%);border:1px solid #8b5cf6;border-radius:10px;padding:20px">
     <h3 style="font-size:15px;text-transform:uppercase;letter-spacing:2px;color:#a78bfa;margin-bottom:16px">🔥 Natural Gas / LNG Disruption Monitor</h3>
     <div id="lngCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px"></div>
   </div>
 </div>
 
+<!-- Crude Oil Tanker Disruption Panel -->
+<div style="max-width:1440px;margin:16px auto 0;padding:0 20px">
+  <div style="background:linear-gradient(135deg,#0f172a 0%,#1a0d05 100%);border:1px solid #fb923c;border-radius:10px;padding:20px">
+    <h3 style="font-size:15px;text-transform:uppercase;letter-spacing:2px;color:#fb923c;margin-bottom:16px">🛢️ Crude Oil Tanker Disruption Monitor</h3>
+    <div id="oilCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px"></div>
+  </div>
+</div>
+
+<!-- Energy Infrastructure Status Panel -->
+<div style="max-width:1440px;margin:16px auto 0;padding:0 20px">
+  <div style="background:linear-gradient(135deg,#0f172a 0%,#1a1005 100%);border:1px solid #f59e0b;border-radius:10px;padding:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+      <h3 style="font-size:15px;text-transform:uppercase;letter-spacing:2px;color:#fbbf24;margin:0">⚡ Energy Infrastructure Status</h3>
+      <div style="display:flex;gap:12px;font-size:12px">
+        <div style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#34d399;display:inline-block"></span><span style="color:#94a3b8">Operational</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#f87171;display:inline-block"></span><span style="color:#94a3b8">Struck/Damaged</span></div>
+        <div style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:#64748b;display:inline-block"></span><span style="color:#94a3b8">Shutdown/Offline</span></div>
+      </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">
+      <div style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px;text-align:center" data-tooltip="Total tracked energy facilities across Iran, Gulf states, and Israel. Baseline: 44 all operational pre-war.">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">Total Tracked</div>
+        <div style="color:#fbbf24;font-size:28px;font-weight:800" id="facilityTotal">44</div>
+        <div style="color:#64748b;font-size:10px">baseline: 44</div>
+      </div>
+      <div style="background:#1e293b;border:1px solid #34d399;border-radius:8px;padding:12px;text-align:center" data-tooltip="Facilities with no reported damage or shutdown orders. Can still be operating under elevated threat.">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">Operational</div>
+        <div style="color:#34d399;font-size:28px;font-weight:800" id="facilityOp">—</div>
+        <div style="color:#64748b;font-size:10px" id="facilityOpPct"></div>
+      </div>
+      <div style="background:#1e293b;border:1px solid #f87171;border-radius:8px;padding:12px;text-align:center" data-tooltip="Confirmed struck by missiles, drones, or sabotage. May still be partially operational but with reduced capacity.">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">Struck</div>
+        <div style="color:#f87171;font-size:28px;font-weight:800" id="facilityStruck">—</div>
+        <div style="color:#64748b;font-size:10px" id="facilityStruckPct"></div>
+      </div>
+      <div style="background:#1e293b;border:1px solid #64748b;border-radius:8px;padding:12px;text-align:center" data-tooltip="Voluntarily shut down or halted due to safety, blockade, or government order. Not physically damaged.">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">Shutdown</div>
+        <div style="color:#94a3b8;font-size:28px;font-weight:800" id="facilityShutdown">—</div>
+        <div style="color:#64748b;font-size:10px" id="facilityShutdownPct"></div>
+      </div>
+      <div style="background:#1e293b;border:1px solid #fb923c;border-radius:8px;padding:12px;text-align:center" data-tooltip="Total offline = struck + shutdown. Represents capacity removed from the market.">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">Total Offline</div>
+        <div style="color:#fb923c;font-size:28px;font-weight:800" id="facilityOffline">—</div>
+        <div style="color:#64748b;font-size:10px" id="facilityOfflinePct"></div>
+      </div>
+    </div>
+
+    <!-- Facility Detail Grid -->
+    <div id="facilityGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:8px;margin-bottom:16px;max-height:400px;overflow-y:auto"></div>
+
+    <!-- Facilities Down Over Time Chart -->
+    <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:16px;height:280px;position:relative">
+      <h4 style="font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin-bottom:8px">📉 Facilities Offline Over Time</h4>
+      <canvas id="facilityChart" style="max-height:230px"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Live Situation Report -->
+<div style="max-width:1440px;margin:16px auto 0;padding:0 20px">
+  <div style="background:linear-gradient(135deg,#0f172a 0%,#1a0f0f 100%);border:1px solid #e05252;border-radius:10px;padding:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+      <h3 style="font-size:15px;text-transform:uppercase;letter-spacing:2px;color:#fda4af;margin:0">🔴 Live Situation Report — Mar 7, 2026</h3>
+      <span style="font-size:11px;color:#64748b">Last updated: 01:00 EST</span>
+    </div>
+
+    <!-- Status Change Timeline -->
+    <div style="margin-bottom:16px">
+      <h4 style="font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:#f59e0b;margin-bottom:10px">⚠️ Status Changes (Last 48h) — Facilities That Went Offline</h4>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;align-items:stretch;gap:0;font-size:12px">
+          <div style="width:100px;flex-shrink:0;background:#e05252;color:#fff;font-weight:700;padding:10px 12px;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center">Mar 6</div>
+          <div style="flex:1;background:#1e293b;border:1px solid #e05252;border-left:none;border-radius:0 6px 6px 0;padding:10px 14px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="color:#f87171;font-weight:700">🆕 Kuwait Shuts Production</span>
+              <span style="background:#f87171;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:3px">NEW OFFLINE</span>
+            </div>
+            <div style="color:#94a3b8;font-size:11px">Mina al-Ahmadi (466k bpd) — Kuwait announced full production shutdown. Was fully operational pre-war. Qatar warns oil could hit $150/bbl in weeks.</div>
+            <div style="color:#64748b;font-size:10px;margin-top:2px">Source: OilPrice.com, BBC</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:stretch;gap:0;font-size:12px">
+          <div style="width:100px;flex-shrink:0;background:#fb923c;color:#000;font-weight:700;padding:10px 12px;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center">Mar 6</div>
+          <div style="flex:1;background:#1e293b;border:1px solid #fb923c;border-left:none;border-radius:0 6px 6px 0;padding:10px 14px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="color:#fb923c;font-weight:700">⚠️ Qatar Threatens Total Production Halt</span>
+              <span style="background:#fb923c;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:3px">ESCALATING</span>
+            </div>
+            <div style="color:#94a3b8;font-size:11px">North Field + Ras Laffan + Mesaieed — Qatar warns "all Gulf production could stop within days." Already reduced; now threatening complete halt of world's largest LNG exporter.</div>
+            <div style="color:#64748b;font-size:10px;margin-top:2px">Source: BBC, Al Jazeera</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:stretch;gap:0;font-size:12px">
+          <div style="width:100px;flex-shrink:0;background:#8b5cf6;color:#fff;font-weight:700;padding:10px 12px;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center">Mar 6</div>
+          <div style="flex:1;background:#1e293b;border:1px solid #8b5cf6;border-left:none;border-radius:0 6px 6px 0;padding:10px 14px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="color:#a855f7;font-weight:700">☠️ 4 Seafarers Killed in Hormuz Attack</span>
+              <span style="background:#a855f7;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:3px">CASUALTIES</span>
+            </div>
+            <div style="color:#94a3b8;font-size:11px">IMO Chief warns of growing risk to crews. Iran tanker attack heightens fears of oil disruption. 300+ oil tankers stranded, 38 Indian ships stuck.</div>
+            <div style="color:#64748b;font-size:10px;margin-top:2px">Source: gCaptain, The Guardian, India Today</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:stretch;gap:0;font-size:12px">
+          <div style="width:100px;flex-shrink:0;background:#60a5fa;color:#fff;font-weight:700;padding:10px 12px;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center">Mar 5-6</div>
+          <div style="flex:1;background:#1e293b;border:1px solid #60a5fa;border-left:none;border-radius:0 6px 6px 0;padding:10px 14px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="color:#60a5fa;font-weight:700">🇺🇸 US Military Strikes Iranian Naval Vessel</span>
+              <span style="background:#60a5fa;color:#000;font-size:9px;font-weight:800;padding:2px 6px;border-radius:3px">MILITARY</span>
+            </div>
+            <div style="color:#94a3b8;font-size:11px">B-2 stealth bombers hit Iran. US strikes Iranian drone carrier. US Energy Secretary announces Navy will escort tankers through Hormuz. IRGC challenges Trump to try.</div>
+            <div style="color:#64748b;font-size:10px;margin-top:2px">Source: Jerusalem Post, Reuters, NDTV</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:stretch;gap:0;font-size:12px">
+          <div style="width:100px;flex-shrink:0;background:#475569;color:#fff;font-weight:700;padding:10px 12px;border-radius:6px 0 0 6px;display:flex;align-items:center;justify-content:center">Mar 4-5</div>
+          <div style="flex:1;background:#1e293b;border:1px solid #475569;border-left:none;border-radius:0 6px 6px 0;padding:10px 14px">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <span style="color:#94a3b8;font-weight:700">💥 Fujairah, Bushehr, Bandar Abbas Struck</span>
+              <span style="background:#64748b;color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:3px">STRUCK</span>
+            </div>
+            <div style="color:#94a3b8;font-size:11px">3 facilities confirmed struck: Fujairah Oil Terminal (UAE strategic storage), Bushehr (Iran nuclear/energy), Bandar Abbas Refinery (320k bpd, near Hormuz). All were operational pre-war.</div>
+            <div style="color:#64748b;font-size:10px;margin-top:2px">Source: Energy Feed, OSINT</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Today's Feed -->
+    <div style="margin-bottom:12px">
+      <h4 style="font-size:12px;text-transform:uppercase;letter-spacing:1.5px;color:#fda4af;margin-bottom:10px">📡 Today's Feed (Mar 7)</h4>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:10px 14px;font-size:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="color:#f87171;font-size:14px">🚨</span>
+            <span style="color:#fda4af;font-size:10px;font-weight:700">05:35 UTC</span>
+            <span style="background:#e05252;color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px">SEV 100</span>
+          </div>
+          <div style="color:#e2e8f0;margin-top:4px">20% of global oil at risk as Hormuz blockade halts ships; crude surges 36% in a week of Iran-Israel conflict</div>
+          <div style="color:#64748b;font-size:10px;margin-top:2px">Business Today</div>
+        </div>
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:10px 14px;font-size:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="color:#fb923c;font-size:14px">⚓</span>
+            <span style="color:#fda4af;font-size:10px;font-weight:700">ONGOING</span>
+            <span style="background:#fb923c;color:#000;font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px">BLOCKADE</span>
+          </div>
+          <div style="color:#e2e8f0;margin-top:4px">Strait of Hormuz shipping at near-total halt (JMIC). Daily tanker traffic collapsed from 138 to 2. Iran says strait open for India/China, closed for US/Israel/Europe.</div>
+          <div style="color:#64748b;font-size:10px;margin-top:2px">Bloomberg, Global Times, Reuters</div>
+        </div>
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:6px;padding:10px 14px;font-size:12px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="color:#34d399;font-size:14px">🛡️</span>
+            <span style="color:#fda4af;font-size:10px;font-weight:700">RESPONSE</span>
+            <span style="background:#34d399;color:#000;font-size:9px;font-weight:800;padding:1px 5px;border-radius:3px">US GOV</span>
+          </div>
+          <div style="color:#e2e8f0;margin-top:4px">Trump admin announces tanker insurance program for Hormuz transit. US Navy escort operations underway. Iranian shadow fleet + Greek ships leading remaining transits.</div>
+          <div style="color:#64748b;font-size:10px;margin-top:2px">Barron's, gCaptain, NDTV</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Status Summary -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px;padding:12px;background:#111827;border:1px solid #1e293b;border-radius:8px">
+      <div style="font-size:11px"><span style="color:#f87171">●</span> <span style="color:#94a3b8">No new physical strikes today (Mar 7)</span></div>
+      <div style="font-size:11px"><span style="color:#fb923c">●</span> <span style="color:#94a3b8">Kuwait production offline since yesterday</span></div>
+      <div style="font-size:11px"><span style="color:#a855f7">●</span> <span style="color:#94a3b8">Qatar warns complete halt imminent</span></div>
+      <div style="font-size:11px"><span style="color:#60a5fa">●</span> <span style="color:#94a3b8">Brent crude at $92.69 (+19% in 5 days)</span></div>
+      <div style="font-size:11px"><span style="color:#f472b6">●</span> <span style="color:#94a3b8">300+ tankers stranded in region</span></div>
+      <div style="font-size:11px"><span style="color:#34d399">●</span> <span style="color:#94a3b8">US Navy escort ops beginning</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Key Oil Alerts Bar -->
+<div style="max-width:1440px;margin:16px auto 0;padding:0 20px">
+  <div style="background:linear-gradient(90deg,#1a0f0f 0%,#0f172a 50%,#1a0f0f 100%);border:1px solid #e05252;border-radius:10px;padding:16px 20px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:20px">🚨</span>
+      <span style="font-size:13px;font-weight:700;color:#fda4af;text-transform:uppercase;letter-spacing:1.5px">OIL ALERTS</span>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;font-size:12px">
+      <div style="background:#1e293b;border:1px solid #e05252;border-radius:6px;padding:8px 14px;text-align:center">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">Brent Crude</div>
+        <div style="color:#f87171;font-size:20px;font-weight:800">$92.69</div>
+        <div style="color:#f87171;font-size:10px">▲ +19% in 5 days</div>
+      </div>
+      <div style="background:#1e293b;border:1px solid #fb923c;border-radius:6px;padding:8px 14px;text-align:center">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">Hormuz Flow</div>
+        <div style="color:#fb923c;font-size:20px;font-weight:800">−62%</div>
+        <div style="color:#fb923c;font-size:10px">vs pre-war</div>
+      </div>
+      <div style="background:#1e293b;border:1px solid #a855f7;border-radius:6px;padding:8px 14px;text-align:center">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">LNG Transit</div>
+        <div style="color:#a855f7;font-size:20px;font-weight:800">−92%</div>
+        <div style="color:#a855f7;font-size:10px">near total halt</div>
+      </div>
+      <div style="background:#1e293b;border:1px solid #f59e0b;border-radius:6px;padding:8px 14px;text-align:center">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">Qatar Warning</div>
+        <div style="color:#f59e0b;font-size:20px;font-weight:800">HALT</div>
+        <div style="color:#f59e0b;font-size:10px">production stop "within days"</div>
+      </div>
+      <div style="background:#1e293b;border:1px solid #34d399;border-radius:6px;padding:8px 14px;text-align:center">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">US Response</div>
+        <div style="color:#34d399;font-size:20px;font-weight:800">INSURE</div>
+        <div style="color:#34d399;font-size:10px">tanker insurance program</div>
+      </div>
+      <div style="background:#1e293b;border:1px solid #f472b6;border-radius:6px;padding:8px 14px;text-align:center">
+        <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">IRGC Status</div>
+        <div style="color:#f472b6;font-size:20px;font-weight:800">ACTIVE</div>
+        <div style="color:#f472b6;font-size:10px">strait patrol ongoing</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Oil Futures Price Chart -->
+<div style="max-width:1440px;margin:16px auto 0;padding:0 20px">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;height:300px;position:relative">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin:0">📈 Oil Futures — 1 Month</h3>
+        <div style="display:flex;gap:14px;font-size:11px">
+          <span style="color:#f87171">● Brent: <b style="color:#fda4af">$92.69</b></span>
+          <span style="color:#fb923c">● WTI: <b style="color:#fbbf24">$90.90</b></span>
+        </div>
+      </div>
+      <canvas id="oilFuturesChart" style="max-height:240px"></canvas>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;height:300px;position:relative">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+        <h3 style="font-size:13px;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin:0">🔥 Natural Gas / LNG — 1 Month</h3>
+        <div style="display:flex;gap:14px;font-size:11px">
+          <span style="color:#34d399">● NG: <b style="color:#6ee7b7">$3.19</b></span>
+          <span style="color:#8b5cf6">● UNG ETF: <b style="color:#c4b5fd">$12.75</b></span>
+        </div>
+      </div>
+      <canvas id="ngFuturesChart" style="max-height:240px"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Oil & LNG News Alerts -->
+<div style="max-width:1440px;margin:16px auto 0;padding:0 20px">
+  <div style="background:linear-gradient(135deg,#0f172a 0%,#1a0f10 100%);border:1px solid #f87171;border-radius:10px;padding:20px">
+    <h3 style="font-size:15px;text-transform:uppercase;letter-spacing:2px;color:#fda4af;margin-bottom:16px">📰 Oil & LNG Crisis — Latest Headlines</h3>
+    <div id="newsAlerts" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px">
+      <a href="https://www.barrons.com" target="_blank" style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 16px;color:#e2e8f0;text-decoration:none;display:flex;align-items:flex-start;gap:10px;transition:border-color 0.2s" onmouseover="this.style.borderColor='#f87171'" onmouseout="this.style.borderColor='#334155'">
+        <span style="color:#f87171;font-size:16px;flex-shrink:0">🔴</span>
+        <div><div style="font-weight:600;line-height:1.3">Trump Admin Will Insure Oil Tankers in the Strait of Hormuz. Will It Fix the Crisis?</div><div style="color:#94a3b8;font-size:11px;margin-top:4px">Barron's · Mar 7</div></div>
+      </a>
+      <a href="https://www.bbc.com" target="_blank" style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 16px;color:#e2e8f0;text-decoration:none;display:flex;align-items:flex-start;gap:10px;transition:border-color 0.2s" onmouseover="this.style.borderColor='#fb923c'" onmouseout="this.style.borderColor='#334155'">
+        <span style="color:#fb923c;font-size:16px;flex-shrink:0">🛢️</span>
+        <div><div style="font-weight:600;line-height:1.3">Oil price surges past $90 after Qatar warns all Gulf production could stop within days</div><div style="color:#94a3b8;font-size:11px;margin-top:4px">BBC · Mar 7</div></div>
+      </a>
+      <a href="https://oilprice.com" target="_blank" style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 16px;color:#e2e8f0;text-decoration:none;display:flex;align-items:flex-start;gap:10px;transition:border-color 0.2s" onmouseover="this.style.borderColor='#a855f7'" onmouseout="this.style.borderColor='#334155'">
+        <span style="color:#a855f7;font-size:16px;flex-shrink:0">🔥</span>
+        <div><div style="font-weight:600;line-height:1.3">Qatar Leases Tankers as LNG Market Hits Crisis Mode</div><div style="color:#94a3b8;font-size:11px;margin-top:4px">OilPrice.com · Mar 6</div></div>
+      </a>
+      <a href="https://www.atlanticcouncil.org" target="_blank" style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 16px;color:#e2e8f0;text-decoration:none;display:flex;align-items:flex-start;gap:10px;transition:border-color 0.2s" onmouseover="this.style.borderColor='#22d3ee'" onmouseout="this.style.borderColor='#334155'">
+        <span style="color:#22d3ee;font-size:16px;flex-shrink:0">🌏</span>
+        <div><div style="font-weight:600;line-height:1.3">What a Middle East oil and LNG crisis means for China and East Asia</div><div style="color:#94a3b8;font-size:11px;margin-top:4px">Atlantic Council · Mar 5</div></div>
+      </a>
+      <a href="https://www.aljazeera.com" target="_blank" style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 16px;color:#e2e8f0;text-decoration:none;display:flex;align-items:flex-start;gap:10px;transition:border-color 0.2s" onmouseover="this.style.borderColor='#34d399'" onmouseout="this.style.borderColor='#334155'">
+        <span style="color:#34d399;font-size:16px;flex-shrink:0">💰</span>
+        <div><div style="font-weight:600;line-height:1.3">Will the US benefit from the oil crisis sparked by the war on Iran?</div><div style="color:#94a3b8;font-size:11px;margin-top:4px">Al Jazeera · Mar 5</div></div>
+      </a>
+      <a href="https://www.aljazeera.com" target="_blank" style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 16px;color:#e2e8f0;text-decoration:none;display:flex;align-items:flex-start;gap:10px;transition:border-color 0.2s" onmouseover="this.style.borderColor='#f59e0b'" onmouseout="this.style.borderColor='#334155'">
+        <span style="color:#f59e0b;font-size:16px;flex-shrink:0">⚠️</span>
+        <div><div style="font-weight:600;line-height:1.3">Iran war is latest threat to a global economy rattled by Trump</div><div style="color:#94a3b8;font-size:11px;margin-top:4px">Al Jazeera · Mar 7</div></div>
+      </a>
+      <a href="https://time.com" target="_blank" style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 16px;color:#e2e8f0;text-decoration:none;display:flex;align-items:flex-start;gap:10px;transition:border-color 0.2s" onmouseover="this.style.borderColor='#f472b6'" onmouseout="this.style.borderColor='#334155'">
+        <span style="color:#f472b6;font-size:16px;flex-shrink:0">⛽</span>
+        <div><div style="font-weight:600;line-height:1.3">Strait of Hormuz Global Oil, Gas Trade Disrupted Amid Iran War</div><div style="color:#94a3b8;font-size:11px;margin-top:4px">Time Magazine · Mar 3</div></div>
+      </a>
+      <a href="https://www.bloomberg.com" target="_blank" style="background:#1e293b;border:1px solid #334155;border-radius:8px;padding:12px 16px;color:#e2e8f0;text-decoration:none;display:flex;align-items:flex-start;gap:10px;transition:border-color 0.2s" onmouseover="this.style.borderColor='#60a5fa'" onmouseout="this.style.borderColor='#334155'">
+        <span style="color:#60a5fa;font-size:16px;flex-shrink:0">🚢</span>
+        <div><div style="font-weight:600;line-height:1.3">More LNG Tankers Divert From Hormuz in Widening Iran Crisis</div><div style="color:#94a3b8;font-size:11px;margin-top:4px">Bloomberg · Mar 2</div></div>
+      </a>
+    </div>
+    <div style="margin-top:12px;font-size:11px;color:#64748b;text-align:right">Last updated: Mar 7, 2026 · Sources: Google News RSS</div>
+  </div>
+</div>
+
 <div class="charts">
-  <div class="chart-box wide" style="height:380px;border-color:#7c3aed">
+  <div class="chart-box wide" style="height:380px;border-color:#8b5cf6">
     <h3 style="color:#a78bfa">🔥 LNG/Gas Carrier Status Over Time</h3>
     <canvas id="lngChart"></canvas>
+  </div>
+  <div class="chart-box wide" style="height:380px;border-color:#fb923c">
+    <h3 style="color:#fb923c">🛢️ Crude Oil Tanker Status Over Time</h3>
+    <canvas id="oilChart"></canvas>
   </div>
   <div class="chart-box wide" style="height:400px">
     <h3>📈 All Metrics Timeline</h3>
@@ -217,8 +509,8 @@ const CARD_DEFS = [
 ];
 
 function var_color(name) {
-  const map = { red:'#ef4444', green:'#22c55e', blue:'#3b82f6', cyan:'#06b6d4',
-    orange:'#f97316', purple:'#a855f7', pink:'#ec4899', accent:'#f59e0b' };
+  const map = { red:'#f87171', green:'#34d399', blue:'#60a5fa', cyan:'#22d3ee',
+    orange:'#fb923c', purple:'#a855f7', pink:'#f472b6', accent:'#f59e0b' };
   return map[name] || '#e2e8f0';
 }
 
@@ -292,12 +584,12 @@ function render() {
   // LNG/Gas cards
   const lngDefs = [
     { key: 'lng_gas_total', label: 'LNG/Gas Carriers', color: '#a78bfa', tip: 'All LNG, LPG, and gas carriers detected in the region. Pre-war: 48/day transiting (UNCTAD Jun 2025). High count = carriers accumulating, not transiting.' },
-    { key: 'lng_gas_stuck', label: 'LNG Stuck (<2kn)', color: '#ef4444', tip: 'LNG/gas carriers moving <2 kn (effectively stopped). Pre-war: ~5. This is the core LNG disruption signal — stuck carriers = no deliveries.' },
-    { key: 'lng_gas_transiting', label: 'LNG Transiting Strait', color: '#22c55e', tip: 'LNG carriers actively passing through Hormuz (>3 kn). Pre-war: ~12 at any time. Near-zero = complete LNG supply cutoff through strait.' },
-    { key: 'lng_gas_anchored_fujairah', label: 'LNG @ Fujairah', color: '#f97316', tip: 'LNG carriers anchored at Fujairah. Pre-war: ~2. These are carriers that reached the Gulf of Oman side but cannot proceed.' },
-    { key: 'lng_gas_inside_gulf', label: 'LNG Trapped in Gulf', color: '#ec4899', tip: 'LNG carriers stuck inside the Persian Gulf. Pre-war: ~3 (loading at Ras Laffan/Mesaieed). High = loaded LNG carriers cannot exit.' },
+    { key: 'lng_gas_stuck', label: 'LNG Stuck (<2kn)', color: '#f87171', tip: 'LNG/gas carriers moving <2 kn (effectively stopped). Pre-war: ~5. This is the core LNG disruption signal — stuck carriers = no deliveries.' },
+    { key: 'lng_gas_transiting', label: 'LNG Transiting Strait', color: '#34d399', tip: 'LNG carriers actively passing through Hormuz (>3 kn). Pre-war: ~12 at any time. Near-zero = complete LNG supply cutoff through strait.' },
+    { key: 'lng_gas_anchored_fujairah', label: 'LNG @ Fujairah', color: '#fb923c', tip: 'LNG carriers anchored at Fujairah. Pre-war: ~2. These are carriers that reached the Gulf of Oman side but cannot proceed.' },
+    { key: 'lng_gas_inside_gulf', label: 'LNG Trapped in Gulf', color: '#f472b6', tip: 'LNG carriers stuck inside the Persian Gulf. Pre-war: ~3 (loading at Ras Laffan/Mesaieed). High = loaded LNG carriers cannot exit.' },
     { key: 'lng_gas_queue_oman', label: 'LNG Queue (Oman)', color: '#a855f7', tip: 'LNG carriers queuing in the Gulf of Oman. Pre-war: ~2. These are inbound carriers that cannot reach Qatar/UAE LNG terminals.' },
-    { key: 'qatar_bound', label: 'Qatar-Bound', color: '#06b6d4', tip: 'Vessels with Qatar destinations (Ras Laffan, Mesaieed, Doha). Qatar = world\'s largest LNG exporter. Pre-war: ~15/day.' },
+    { key: 'qatar_bound', label: 'Qatar-Bound', color: '#22d3ee', tip: 'Vessels with Qatar destinations (Ras Laffan, Mesaieed, Doha). Qatar = world\'s largest LNG exporter. Pre-war: ~15/day.' },
     { key: 'qatar_bound_stuck', label: 'Qatar-Bound Stuck', color: '#f59e0b', tip: 'Qatar-bound vessels unable to proceed (<2 kn). Pre-war: ~1. High = Qatar LNG exports physically blocked.' },
   ];
   const lngEl = document.getElementById('lngCards');
@@ -311,10 +603,10 @@ function render() {
     if (prev2 !== null) {
       const d = val - prev2;
       const arrow = d > 0 ? '▲' : d < 0 ? '▼' : '─';
-      const dc = d > 0 ? '#ef4444' : d < 0 ? '#22c55e' : '#64748b';
+      const dc = d > 0 ? '#f87171' : d < 0 ? '#34d399' : '#64748b';
       deltaHtml = `<span style="color:${dc};font-size:11px">${arrow} ${Math.abs(d)}</span>`;
     }
-    const ratioColor = ratio > 5 ? '#ef4444' : ratio > 3 ? '#f97316' : ratio > 1.5 ? '#f59e0b' : '#22c55e';
+    const ratioColor = ratio > 5 ? '#f87171' : ratio > 3 ? '#fb923c' : ratio > 1.5 ? '#f59e0b' : '#34d399';
     lngEl.innerHTML += `<div style="background:#0f172a;padding:12px;border-radius:8px;border-left:3px solid ${def.color};position:relative;cursor:help" data-tooltip="${def.tip || ''}">
       <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">${def.label}</div>
       <div style="font-size:28px;font-weight:800;color:${def.color};line-height:1.2">${val}</div>
@@ -327,17 +619,19 @@ function render() {
 
   // Zone stacked bar
   const zoneData = [
-    { label: 'Fujairah', val: latest.fujairah_anchored, color: '#ef4444' },
-    { label: 'Inside Gulf', val: latest.inside_gulf_stuck, color: '#f97316' },
-    { label: 'Strait', val: latest.strait_transiting, color: '#22c55e' },
+    { label: 'Fujairah', val: latest.fujairah_anchored, color: '#f87171' },
+    { label: 'Inside Gulf', val: latest.inside_gulf_stuck, color: '#fb923c' },
+    { label: 'Strait', val: latest.strait_transiting, color: '#34d399' },
     { label: 'Gulf Oman', val: latest.gulf_oman_queue, color: '#a855f7' },
-    { label: 'Arabian Sea', val: latest.arabian_sea_queue || 0, color: '#3b82f6' },
+    { label: 'Arabian Sea', val: latest.arabian_sea_queue || 0, color: '#60a5fa' },
   ];
   const zoneTotal = zoneData.reduce((s, z) => s + z.val, 0);
 
   // Charts
   renderAllMetricsChart();
   renderLngChart();
+  renderOilChart();
+  renderOilCards(latest, prev);
   renderSeverityChart();
   renderZoneChart(zoneData);
   renderFlowChart();
@@ -395,6 +689,16 @@ function initBaselines(firstSnapshot) {
     lng_gas_queue_oman: { normal: 2, label: 'LNG Queue Oman', unit: 'carriers', note: 'Pre-war: 1-3 LNG passing through Gulf of Oman (not queuing)' },
     qatar_bound:        { normal: 15, label: 'Qatar-Bound', unit: 'vessels', note: 'Pre-war: ~12-18 vessels heading to Ras Laffan / Mesaieed daily' },
     qatar_bound_stuck:  { normal: 1, label: 'Qatar-Bound Stuck', unit: 'vessels', note: 'Pre-war: 0-2 Qatar-bound idle (weather/scheduling)' },
+    // --- Crude Oil Tankers ---
+    // UNCTAD Jun 2025: 53 oil tankers/day transiting Hormuz, ~20M bpd (EIA)
+    crude_total:        { normal: 53, label: 'Crude Oil Tankers', unit: 'tankers', note: 'UNCTAD Jun 2025: 53 oil tankers/day transit Hormuz carrying ~20M bpd' },
+    crude_stuck:        { normal: 5, label: 'Crude Stuck', unit: 'tankers', note: 'Pre-war: ~3-7 crude tankers slow/stopped (STS ops, waiting berth)' },
+    crude_transiting:   { normal: 15, label: 'Crude Transiting', unit: 'tankers', note: 'Pre-war: ~12-18 crude tankers actively in strait at any time' },
+    crude_anchored_fujairah: { normal: 8, label: 'Crude @ Fujairah', unit: 'tankers', note: 'Pre-war: 5-10 at Fujairah anchorage (world\'s largest bunkering hub)' },
+    crude_inside_gulf:  { normal: 20, label: 'Crude Inside Gulf', unit: 'tankers', note: 'Pre-war: 15-25 loading at Ras Tanura, Jubail, Kharg, Basrah' },
+    crude_queue_oman:   { normal: 5, label: 'Crude Queue Oman', unit: 'tankers', note: 'Pre-war: 3-7 passing through Gulf of Oman' },
+    oil_terminal_bound: { normal: 25, label: 'Oil Terminal-Bound', unit: 'vessels', note: 'Pre-war: ~20-30 vessels heading to major Gulf oil terminals daily' },
+    oil_terminal_bound_stuck: { normal: 2, label: 'Terminal-Bound Stuck', unit: 'vessels', note: 'Pre-war: 1-3 terminal-bound idle (scheduling)' },
   };
 }
 
@@ -405,17 +709,17 @@ function renderLngChart() {
 
   const datasets = [
     { label: 'LNG/Gas Total', data: snapshots.map(s => s.lng_gas_total || 0), borderColor: '#a78bfa', borderWidth: 2.5, pointRadius: 4, tension: 0.3, fill: false },
-    { label: 'LNG Stuck', data: snapshots.map(s => s.lng_gas_stuck || 0), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2.5, pointRadius: 4, tension: 0.3, fill: true },
-    { label: 'LNG Transiting', data: snapshots.map(s => s.lng_gas_transiting || 0), borderColor: '#22c55e', borderWidth: 2.5, pointRadius: 4, tension: 0.3, fill: false },
-    { label: 'LNG Fujairah', data: snapshots.map(s => s.lng_gas_anchored_fujairah || 0), borderColor: '#f97316', borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false },
-    { label: 'LNG Inside Gulf', data: snapshots.map(s => s.lng_gas_inside_gulf || 0), borderColor: '#ec4899', borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false },
-    { label: 'Qatar-Bound', data: snapshots.map(s => s.qatar_bound || 0), borderColor: '#06b6d4', borderWidth: 2, pointRadius: 4, tension: 0.3, borderDash: [5,3], fill: false },
+    { label: 'LNG Stuck', data: snapshots.map(s => s.lng_gas_stuck || 0), borderColor: '#f87171', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2.5, pointRadius: 4, tension: 0.3, fill: true },
+    { label: 'LNG Transiting', data: snapshots.map(s => s.lng_gas_transiting || 0), borderColor: '#34d399', borderWidth: 2.5, pointRadius: 4, tension: 0.3, fill: false },
+    { label: 'LNG Fujairah', data: snapshots.map(s => s.lng_gas_anchored_fujairah || 0), borderColor: '#fb923c', borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false },
+    { label: 'LNG Inside Gulf', data: snapshots.map(s => s.lng_gas_inside_gulf || 0), borderColor: '#f472b6', borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false },
+    { label: 'Qatar-Bound', data: snapshots.map(s => s.qatar_bound || 0), borderColor: '#22d3ee', borderWidth: 2, pointRadius: 4, tension: 0.3, borderDash: [5,3], fill: false },
     { label: 'Qatar-Bound Stuck', data: snapshots.map(s => s.qatar_bound_stuck || 0), borderColor: '#f59e0b', borderWidth: 2, pointRadius: 4, tension: 0.3, borderDash: [5,3], fill: false },
   ];
 
   // Add baseline annotation lines
   const annotations = {
-    normalTransit: { type: 'line', yMin: 12, yMax: 12, borderColor: '#22c55e44', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'Normal LNG transits (~12/day)', color: '#22c55e88', backgroundColor: 'transparent', font: { size: 9 }, position: 'end' } },
+    normalTransit: { type: 'line', yMin: 12, yMax: 12, borderColor: '#34d39944', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'Normal LNG transits (~12/day)', color: '#34d39988', backgroundColor: 'transparent', font: { size: 9 }, position: 'end' } },
     normalTotal: { type: 'line', yMin: 76, yMax: 76, borderColor: '#a78bfa44', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'Normal LNG in region (~76)', color: '#a78bfa88', backgroundColor: 'transparent', font: { size: 9 }, position: 'start' } },
   };
 
@@ -431,7 +735,83 @@ function renderLngChart() {
       },
       plugins: {
         legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10, family: 'SF Mono, monospace' }, usePointStyle: true, pointStyle: 'line', padding: 12 } },
-        tooltip: { backgroundColor: '#1e293b', titleColor: '#e2e8f0', bodyColor: '#94a3b8', borderColor: '#7c3aed', borderWidth: 1 },
+        tooltip: { backgroundColor: '#1e293b', titleColor: '#e2e8f0', bodyColor: '#94a3b8', borderColor: '#8b5cf6', borderWidth: 1 },
+        annotation: { annotations }
+      }
+    }
+  });
+}
+
+function renderOilCards(latest, prev) {
+  const oilDefs = [
+    { key: 'crude_total', label: 'Crude Oil Tankers', color: '#fb923c', tip: 'All crude oil tankers (VLCC, Suezmax, Aframax) detected in region. UNCTAD Jun 2025: 53 oil tankers/day transit Hormuz carrying ~20M bpd.' },
+    { key: 'crude_stuck', label: 'Crude Stuck (<2kn)', color: '#f87171', tip: 'Crude tankers moving <2 kn (effectively stopped). Pre-war: ~5. Core oil disruption signal — stuck tankers = supply cutoff.' },
+    { key: 'crude_transiting', label: 'Crude Transiting Strait', color: '#34d399', tip: 'Crude tankers actively passing through Hormuz (>3 kn). Pre-war: ~15. Near-zero = oil supply blockade.' },
+    { key: 'crude_anchored_fujairah', label: 'Crude @ Fujairah', color: '#fb923c', tip: 'Crude tankers at Fujairah anchorage. Pre-war: ~8 (world\'s largest bunkering zone). High = tankers diverted/waiting.' },
+    { key: 'crude_inside_gulf', label: 'Crude Trapped in Gulf', color: '#f472b6', tip: 'Crude tankers stuck inside Persian Gulf. Pre-war: ~20 (loading at Ras Tanura, Jubail, Kharg). High = loaded crude cannot exit.' },
+    { key: 'crude_queue_oman', label: 'Crude Queue (Oman)', color: '#a855f7', tip: 'Crude tankers queuing in Gulf of Oman. Pre-war: ~5. Inbound tankers that cannot reach loading terminals.' },
+    { key: 'oil_terminal_bound', label: 'Oil Terminal-Bound', color: '#22d3ee', tip: 'Vessels heading to major Gulf oil terminals (Ras Tanura, Jubail, Kharg, Basrah, etc.). Pre-war: ~25/day.' },
+    { key: 'oil_terminal_bound_stuck', label: 'Terminal-Bound Stuck', color: '#f59e0b', tip: 'Oil terminal-bound vessels unable to proceed (<2 kn). Pre-war: ~2. High = oil exports physically blocked.' },
+  ];
+  const oilEl = document.getElementById('oilCards');
+  oilEl.innerHTML = '';
+  for (const def of oilDefs) {
+    const val = latest[def.key] || 0;
+    const prev2 = prev ? (prev[def.key] || 0) : null;
+    const baseline = (BASELINES[def.key] || {}).normal || val || 1;
+    const ratio = baseline > 0 ? (val / baseline) : 0;
+    let deltaHtml = '<span style="color:#64748b;font-size:11px">first snapshot</span>';
+    if (prev2 !== null) {
+      const d = val - prev2;
+      const arrow = d > 0 ? '▲' : d < 0 ? '▼' : '─';
+      const dc = d > 0 ? '#f87171' : d < 0 ? '#34d399' : '#64748b';
+      deltaHtml = `<span style="color:${dc};font-size:11px">${arrow} ${Math.abs(d)}</span>`;
+    }
+    const ratioColor = ratio > 5 ? '#f87171' : ratio > 3 ? '#fb923c' : ratio > 1.5 ? '#f59e0b' : '#34d399';
+    oilEl.innerHTML += `<div style="background:#0f172a;padding:12px;border-radius:8px;border-left:3px solid ${def.color};position:relative;cursor:help" data-tooltip="${def.tip || ''}">
+      <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:1px">${def.label}</div>
+      <div style="font-size:28px;font-weight:800;color:${def.color};line-height:1.2">${val}</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:2px">
+        ${deltaHtml}
+        <span style="color:${ratioColor};font-size:10px;font-weight:700">${ratio.toFixed(1)}x baseline</span>
+      </div>
+    </div>`;
+  }
+}
+
+function renderOilChart() {
+  if (charts.oil) charts.oil.destroy();
+  const ctx = document.getElementById('oilChart').getContext('2d');
+  const labels = snapshots.map(s => new Date(s.timestamp));
+
+  const datasets = [
+    { label: 'Crude Total', data: snapshots.map(s => s.crude_total || 0), borderColor: '#fb923c', borderWidth: 2.5, pointRadius: 4, tension: 0.3, fill: false },
+    { label: 'Crude Stuck', data: snapshots.map(s => s.crude_stuck || 0), borderColor: '#f87171', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2.5, pointRadius: 4, tension: 0.3, fill: true },
+    { label: 'Crude Transiting', data: snapshots.map(s => s.crude_transiting || 0), borderColor: '#34d399', borderWidth: 2.5, pointRadius: 4, tension: 0.3, fill: false },
+    { label: 'Crude Fujairah', data: snapshots.map(s => s.crude_anchored_fujairah || 0), borderColor: '#fb923c', borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false },
+    { label: 'Crude Inside Gulf', data: snapshots.map(s => s.crude_inside_gulf || 0), borderColor: '#f472b6', borderWidth: 2, pointRadius: 4, tension: 0.3, fill: false },
+    { label: 'Oil Terminal-Bound', data: snapshots.map(s => s.oil_terminal_bound || 0), borderColor: '#22d3ee', borderWidth: 2, pointRadius: 4, tension: 0.3, borderDash: [5,3], fill: false },
+    { label: 'Terminal-Bound Stuck', data: snapshots.map(s => s.oil_terminal_bound_stuck || 0), borderColor: '#f59e0b', borderWidth: 2, pointRadius: 4, tension: 0.3, borderDash: [5,3], fill: false },
+  ];
+
+  const annotations = {
+    normalTransit: { type: 'line', yMin: 15, yMax: 15, borderColor: '#34d39944', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'Normal crude transits (~15)', color: '#34d39988', backgroundColor: 'transparent', font: { size: 9 }, position: 'end' } },
+    normalTotal: { type: 'line', yMin: 53, yMax: 53, borderColor: '#fb923c44', borderWidth: 1, borderDash: [4,4], label: { display: true, content: 'Normal crude tankers (~53/day)', color: '#fb923c88', backgroundColor: 'transparent', font: { size: 9 }, position: 'start' } },
+  };
+
+  charts.oil = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      scales: {
+        x: { type: snapshots.length > 1 ? 'time' : 'category', time: { tooltipFormat: 'MMM d, HH:mm', displayFormats: { hour: 'MMM d HH:mm' } }, grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+        y: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Crude Oil Tankers', color: '#fb923c', font: { size: 11 } }, suggestedMin: 0 }
+      },
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10, family: 'SF Mono, monospace' }, usePointStyle: true, pointStyle: 'line', padding: 12 } },
+        tooltip: { backgroundColor: '#1e293b', titleColor: '#e2e8f0', bodyColor: '#94a3b8', borderColor: '#fb923c', borderWidth: 1 },
         annotation: { annotations }
       }
     }
@@ -446,14 +826,14 @@ function renderAllMetricsChart() {
   // Left Y axis: vessel counts (0-400+)
   // Right Y axis: severity score (0-1200+) and speed (0-15)
   const datasets = [
-    { label: 'Fujairah Anchored', data: snapshots.map(s => s.fujairah_anchored), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
-    { label: 'Inside Gulf Stuck', data: snapshots.map(s => s.inside_gulf_stuck), borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
+    { label: 'Fujairah Anchored', data: snapshots.map(s => s.fujairah_anchored), borderColor: '#f87171', backgroundColor: 'rgba(239,68,68,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
+    { label: 'Inside Gulf Stuck', data: snapshots.map(s => s.inside_gulf_stuck), borderColor: '#fb923c', backgroundColor: 'rgba(249,115,22,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
     { label: 'Gulf of Oman Queue', data: snapshots.map(s => s.gulf_oman_queue), borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
-    { label: 'Zero Speed Tankers', data: snapshots.map(s => s.zero_speed_tankers), borderColor: '#ec4899', backgroundColor: 'rgba(236,72,153,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
+    { label: 'Zero Speed Tankers', data: snapshots.map(s => s.zero_speed_tankers), borderColor: '#f472b6', backgroundColor: 'rgba(236,72,153,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
     { label: 'Iran-Flagged', data: snapshots.map(s => s.iran_flagged), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.08)', fill: false, borderWidth: 2, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
-    { label: 'Strait Transiting', data: snapshots.map(s => s.strait_transiting), borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
-    { label: 'Severity Score', data: snapshots.map(s => s.crisis_severity), borderColor: '#ff2222', backgroundColor: 'rgba(255,34,34,0.05)', fill: true, borderWidth: 3, pointRadius: 5, tension: 0.3, borderDash: [6, 3], yAxisID: 'y1' },
-    { label: 'Avg Speed (kn)', data: snapshots.map(s => s.avg_strait_speed), borderColor: '#06b6d4', fill: false, borderWidth: 2, pointRadius: 4, tension: 0.3, borderDash: [3, 3], yAxisID: 'y2' },
+    { label: 'Strait Transiting', data: snapshots.map(s => s.strait_transiting), borderColor: '#34d399', backgroundColor: 'rgba(34,197,94,0.08)', fill: false, borderWidth: 2.5, pointRadius: 4, tension: 0.3, yAxisID: 'y' },
+    { label: 'Severity Score', data: snapshots.map(s => s.crisis_severity), borderColor: '#f06060', backgroundColor: 'rgba(255,34,34,0.05)', fill: true, borderWidth: 3, pointRadius: 5, tension: 0.3, borderDash: [6, 3], yAxisID: 'y1' },
+    { label: 'Avg Speed (kn)', data: snapshots.map(s => s.avg_strait_speed), borderColor: '#22d3ee', fill: false, borderWidth: 2, pointRadius: 4, tension: 0.3, borderDash: [3, 3], yAxisID: 'y2' },
   ];
 
   charts.allMetrics = new Chart(ctx, {
@@ -477,14 +857,14 @@ function renderAllMetricsChart() {
         },
         y1: {
           position: 'right', grid: { display: false },
-          ticks: { color: '#ff2222' },
-          title: { display: true, text: 'Severity', color: '#ff2222', font: { size: 11 } },
+          ticks: { color: '#f06060' },
+          title: { display: true, text: 'Severity', color: '#f06060', font: { size: 11 } },
           suggestedMin: 0
         },
         y2: {
           position: 'right', grid: { display: false },
-          ticks: { color: '#06b6d4', callback: function(v) { return v + ' kn'; } },
-          title: { display: true, text: 'Speed', color: '#06b6d4', font: { size: 11 } },
+          ticks: { color: '#22d3ee', callback: function(v) { return v + ' kn'; } },
+          title: { display: true, text: 'Speed', color: '#22d3ee', font: { size: 11 } },
           suggestedMin: 0, suggestedMax: 15
         }
       },
@@ -513,10 +893,10 @@ function renderSeverityChart() {
       datasets: [{
         label: 'Severity Score',
         data: snapshots.map(s => s.crisis_severity),
-        borderColor: '#ef4444',
+        borderColor: '#f87171',
         backgroundColor: 'rgba(239,68,68,0.1)',
         fill: true, tension: 0.3, pointRadius: snapshots.length < 20 ? 6 : 3,
-        pointBackgroundColor: '#ef4444', borderWidth: 3,
+        pointBackgroundColor: '#f87171', borderWidth: 3,
       }]
     },
     options: {
@@ -541,11 +921,11 @@ function renderZoneChart(zoneData) {
   if (snapshots.length > 1) {
     // Stacked area over time
     const datasets = [
-      { label: 'Fujairah Anchored', key: 'fujairah_anchored', color: '#ef4444' },
-      { label: 'Inside Gulf Stuck', key: 'inside_gulf_stuck', color: '#f97316' },
-      { label: 'Strait Transiting', key: 'strait_transiting', color: '#22c55e' },
+      { label: 'Fujairah Anchored', key: 'fujairah_anchored', color: '#f87171' },
+      { label: 'Inside Gulf Stuck', key: 'inside_gulf_stuck', color: '#fb923c' },
+      { label: 'Strait Transiting', key: 'strait_transiting', color: '#34d399' },
       { label: 'Gulf of Oman Queue', key: 'gulf_oman_queue', color: '#a855f7' },
-      { label: 'Arabian Sea Queue', key: 'arabian_sea_queue', color: '#3b82f6' },
+      { label: 'Arabian Sea Queue', key: 'arabian_sea_queue', color: '#60a5fa' },
     ];
     charts.zone = new Chart(ctx, {
       type: 'bar',
@@ -594,11 +974,11 @@ function renderFlowChart() {
     data: {
       labels: snapshots.length > 1 ? snapshots.map(s => new Date(s.timestamp)) : ['Stuck/Anchored', 'Moving'],
       datasets: snapshots.length > 1 ? [
-        { label: 'Stuck/Anchored', data: stuck, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3 },
-        { label: 'Moving', data: moving, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3 },
+        { label: 'Stuck/Anchored', data: stuck, borderColor: '#f87171', backgroundColor: 'rgba(239,68,68,0.1)', fill: true, tension: 0.3 },
+        { label: 'Moving', data: moving, borderColor: '#34d399', backgroundColor: 'rgba(34,197,94,0.1)', fill: true, tension: 0.3 },
       ] : [{
         data: [stuck[0], moving[0]],
-        backgroundColor: ['#ef4444cc', '#22c55ecc'],
+        backgroundColor: ['#f87171cc', '#34d399cc'],
         borderWidth: 0,
       }]
     },
@@ -621,16 +1001,16 @@ function renderStraitChart() {
     data: {
       labels: snapshots.map(s => new Date(s.timestamp)),
       datasets: [
-        { label: 'Transiting', data: snapshots.map(s => s.strait_transiting), borderColor: '#22c55e', pointRadius: 5, tension: 0.3, yAxisID: 'y' },
-        { label: 'Avg Speed (kn)', data: snapshots.map(s => s.avg_strait_speed), borderColor: '#06b6d4', pointRadius: 5, tension: 0.3, yAxisID: 'y1', borderDash: [5, 5] },
+        { label: 'Transiting', data: snapshots.map(s => s.strait_transiting), borderColor: '#34d399', pointRadius: 5, tension: 0.3, yAxisID: 'y' },
+        { label: 'Avg Speed (kn)', data: snapshots.map(s => s.avg_strait_speed), borderColor: '#22d3ee', pointRadius: 5, tension: 0.3, yAxisID: 'y1', borderDash: [5, 5] },
       ]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
       scales: {
         x: { type: snapshots.length > 1 ? 'time' : 'category', grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
-        y: { position: 'left', grid: { color: '#1e293b' }, ticks: { color: '#22c55e' }, title: { display: true, text: 'Ships', color: '#94a3b8' } },
-        y1: { position: 'right', grid: { display: false }, ticks: { color: '#06b6d4' }, title: { display: true, text: 'Knots', color: '#94a3b8' } }
+        y: { position: 'left', grid: { color: '#1e293b' }, ticks: { color: '#34d399' }, title: { display: true, text: 'Ships', color: '#94a3b8' } },
+        y1: { position: 'right', grid: { display: false }, ticks: { color: '#22d3ee' }, title: { display: true, text: 'Knots', color: '#94a3b8' } }
       },
       plugins: { legend: { labels: { color: '#94a3b8' } } }
     }
@@ -668,14 +1048,14 @@ function renderRatioChart() {
   const labels = snapshots.map(s => new Date(s.timestamp));
 
   const metrics = [
-    { key: 'fujairah_anchored', color: '#ef4444' },
-    { key: 'inside_gulf_stuck', color: '#f97316' },
-    { key: 'strait_transiting', color: '#22c55e', invert: true },
+    { key: 'fujairah_anchored', color: '#f87171' },
+    { key: 'inside_gulf_stuck', color: '#fb923c' },
+    { key: 'strait_transiting', color: '#34d399', invert: true },
     { key: 'gulf_oman_queue', color: '#a855f7' },
-    { key: 'zero_speed_tankers', color: '#ec4899' },
+    { key: 'zero_speed_tankers', color: '#f472b6' },
     { key: 'iran_flagged', color: '#f59e0b' },
-    { key: 'avg_strait_speed', color: '#06b6d4', invert: true },
-    { key: 'crisis_severity', color: '#ff2222' },
+    { key: 'avg_strait_speed', color: '#22d3ee', invert: true },
+    { key: 'crisis_severity', color: '#f06060' },
   ];
 
   const datasets = metrics.map(m => {
@@ -743,8 +1123,8 @@ function renderBaselineTable() {
     const isUp = current > b.normal;
     const isBad = key === 'avg_strait_speed' || key === 'strait_transiting' ? !isUp : isUp;
     const arrow = isUp ? '▲' : '▼';
-    const color = isBad ? '#ef4444' : '#22c55e';
-    const rColor = ratio > 3 ? '#ef4444' : ratio > 2 ? '#f97316' : ratio > 1.5 ? '#f59e0b' : '#94a3b8';
+    const color = isBad ? '#f87171' : '#34d399';
+    const rColor = ratio > 3 ? '#f87171' : ratio > 2 ? '#fb923c' : ratio > 1.5 ? '#f59e0b' : '#94a3b8';
 
     html += `<div style="background:#0f172a;padding:12px;border-radius:8px;border-left:3px solid ${color}">
       <div style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:1px">${b.label}</div>
@@ -778,21 +1158,21 @@ function renderZoneMap() {
     {
       name: 'Strait of Hormuz',
       bounds: [[25.5, 55.8], [26.7, 57.2]],
-      color: '#22c55e',
+      color: '#34d399',
       key: 'strait',
       desc: 'Transit chokepoint — normal ~55 tankers/day, 21M bpd oil + 15% global LNG'
     },
     {
       name: 'Fujairah Anchorage',
       bounds: [[24.8, 56.0], [25.6, 56.9]],
-      color: '#ef4444',
+      color: '#f87171',
       key: 'fujairah',
       desc: 'Outside Hormuz — ships park here when strait is blocked'
     },
     {
       name: 'Inside Gulf (Trapped)',
       bounds: [[24.0, 48.0], [30.0, 55.8]],
-      color: '#f97316',
+      color: '#fb923c',
       key: 'inside_gulf',
       desc: 'Persian Gulf — Ras Tanura, Qatar, Kuwait, Bahrain. Ships cannot exit.'
     },
@@ -806,7 +1186,7 @@ function renderZoneMap() {
     {
       name: 'Arabian Sea (Diverted)',
       bounds: [[15.0, 57.0], [23.0, 65.0]],
-      color: '#3b82f6',
+      color: '#60a5fa',
       key: 'arabian_sea',
       desc: 'Ships diverted or holding in open ocean, awaiting routing orders'
     }
@@ -843,6 +1223,7 @@ function renderZoneMap() {
     // Label
     const center = [(z.bounds[0][0] + z.bounds[1][0]) / 2, (z.bounds[0][1] + z.bounds[1][1]) / 2];
     const lngCount = latest['lng_gas_' + (z.key === 'fujairah' ? 'anchored_fujairah' : z.key === 'strait' ? 'transiting' : z.key === 'inside_gulf' ? 'inside_gulf' : z.key === 'gulf_oman' ? 'queue_oman' : '')] || 0;
+    const crudeCount = latest['crude_' + (z.key === 'fujairah' ? 'anchored_fujairah' : z.key === 'strait' ? 'transiting' : z.key === 'inside_gulf' ? 'inside_gulf' : z.key === 'gulf_oman' ? 'queue_oman' : '')] || 0;
 
     const label = L.divIcon({
       className: '',
@@ -850,9 +1231,10 @@ function renderZoneMap() {
         ${z.name}<br>
         <span style="font-size:18px">${count}</span> <span style="font-size:10px;opacity:0.7">vessels</span>
         ${lngCount > 0 ? '<br><span style="font-size:10px;color:#a78bfa">🔥 ' + lngCount + ' LNG</span>' : ''}
+        ${crudeCount > 0 ? '<br><span style="font-size:10px;color:#fb923c">🛢️ ' + crudeCount + ' Crude</span>' : ''}
       </div>`,
-      iconSize: [200, 60],
-      iconAnchor: [100, 30]
+      iconSize: [200, 80],
+      iconAnchor: [100, 40]
     });
     L.marker(center, { icon: label, interactive: false }).addTo(map);
 
@@ -860,6 +1242,7 @@ function renderZoneMap() {
       <b style="color:${z.color}">${z.name}</b><br>
       <b>${count}</b> vessels total<br>
       ${lngCount > 0 ? '<b style="color:#a78bfa">' + lngCount + '</b> LNG/Gas carriers<br>' : ''}
+      ${crudeCount > 0 ? '<b style="color:#fb923c">' + crudeCount + '</b> Crude oil tankers<br>' : ''}
       <span style="color:#888;font-size:10px">${z.desc}</span>
     </div>`, { className: 'dark-popup' });
 
@@ -896,6 +1279,339 @@ render();
 tryFetchMetrics();
 // Auto-refresh every 60s if served locally
 setInterval(tryFetchMetrics, 60000);
+
+// ── OIL FUTURES PRICE CHART ──
+(function() {
+  const brent = [{"d":"02-09","p":69.04},{"d":"02-10","p":68.8},{"d":"02-11","p":69.4},{"d":"02-12","p":67.52},{"d":"02-13","p":67.75},{"d":"02-17","p":67.42},{"d":"02-18","p":70.35},{"d":"02-19","p":71.66},{"d":"02-20","p":71.76},{"d":"02-23","p":71.49},{"d":"02-24","p":70.77},{"d":"02-25","p":70.85},{"d":"02-26","p":70.75},{"d":"02-27","p":72.48},{"d":"03-02","p":77.74},{"d":"03-03","p":81.4},{"d":"03-04","p":81.4},{"d":"03-05","p":85.41},{"d":"03-06","p":92.69}];
+  const wti = [{"d":"02-09","p":64.36},{"d":"02-10","p":63.96},{"d":"02-11","p":64.63},{"d":"02-12","p":62.84},{"d":"02-13","p":62.89},{"d":"02-17","p":62.33},{"d":"02-18","p":65.19},{"d":"02-19","p":66.43},{"d":"02-20","p":66.39},{"d":"02-23","p":66.31},{"d":"02-24","p":65.63},{"d":"02-25","p":65.42},{"d":"02-26","p":65.21},{"d":"02-27","p":67.02},{"d":"03-02","p":71.23},{"d":"03-03","p":74.56},{"d":"03-04","p":74.66},{"d":"03-05","p":81.01},{"d":"03-06","p":90.9}];
+
+  const ctx = document.getElementById('oilFuturesChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: brent.map(d => d.d),
+      datasets: [
+        {
+          label: 'Brent Crude (BZ=F)',
+          data: brent.map(d => d.p),
+          borderColor: '#f87171',
+          backgroundColor: 'rgba(248,113,113,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#f87171',
+          tension: 0.3,
+          fill: true
+        },
+        {
+          label: 'WTI Crude (CL=F)',
+          data: wti.map(d => d.p),
+          borderColor: '#fb923c',
+          backgroundColor: 'rgba(251,146,60,0.06)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#fb923c',
+          tension: 0.3,
+          fill: true
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(2); }
+          }
+        },
+        annotation: {
+          annotations: {
+            warStart: {
+              type: 'line', xMin: 13.5, xMax: 13.5,
+              borderColor: '#fda4af66', borderWidth: 2, borderDash: [5, 4],
+              label: { display: true, content: '⚔️ War Begins Feb 28', color: '#fda4af', backgroundColor: 'rgba(15,23,42,0.85)', font: { size: 10 }, position: 'start', padding: 4 }
+            },
+            preWar: {
+              type: 'line', yMin: 72.48, yMax: 72.48,
+              borderColor: '#34d39933', borderWidth: 1, borderDash: [4, 4],
+              label: { display: true, content: 'Pre-war: $72.48', color: '#34d39988', backgroundColor: 'transparent', font: { size: 9 }, position: 'start' }
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 45 } },
+        y: {
+          grid: { color: '#1e293b' },
+          ticks: { color: '#94a3b8', callback: v => '$' + v },
+          title: { display: true, text: 'USD/barrel', color: '#94a3b8', font: { size: 10 } }
+        }
+      }
+    }
+  });
+})();
+
+// ── NATURAL GAS / LNG FUTURES CHART ──
+(function() {
+  const ng = [{"d":"02-09","p":3.14},{"d":"02-10","p":3.12},{"d":"02-11","p":3.16},{"d":"02-12","p":3.22},{"d":"02-13","p":3.24},{"d":"02-17","p":3.03},{"d":"02-18","p":3.01},{"d":"02-19","p":3.0},{"d":"02-20","p":3.05},{"d":"02-23","p":2.98},{"d":"02-24","p":2.91},{"d":"02-25","p":2.97},{"d":"02-26","p":2.83},{"d":"02-27","p":2.86},{"d":"03-02","p":2.96},{"d":"03-03","p":3.05},{"d":"03-04","p":2.92},{"d":"03-05","p":3.0},{"d":"03-06","p":3.19}];
+  const ung = [{"d":"02-09","p":12.17},{"d":"02-10","p":12.13},{"d":"02-11","p":12.32},{"d":"02-12","p":12.43},{"d":"02-13","p":12.44},{"d":"02-17","p":11.9},{"d":"02-18","p":11.87},{"d":"02-19","p":11.8},{"d":"02-20","p":12.01},{"d":"02-23","p":11.74},{"d":"02-24","p":11.46},{"d":"02-25","p":11.6},{"d":"02-26","p":11.38},{"d":"02-27","p":11.52},{"d":"03-02","p":12.0},{"d":"03-03","p":12.28},{"d":"03-04","p":11.78},{"d":"03-05","p":12.05},{"d":"03-06","p":12.75}];
+
+  const ctx = document.getElementById('ngFuturesChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ng.map(d => d.d),
+      datasets: [
+        {
+          label: 'Natural Gas (NG=F)',
+          data: ng.map(d => d.p),
+          borderColor: '#34d399',
+          backgroundColor: 'rgba(52,211,153,0.08)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#34d399',
+          tension: 0.3,
+          fill: true,
+          yAxisID: 'y'
+        },
+        {
+          label: 'UNG ETF',
+          data: ung.map(d => d.p),
+          borderColor: '#8b5cf6',
+          backgroundColor: 'rgba(139,92,246,0.06)',
+          borderWidth: 2.5,
+          pointRadius: 3,
+          pointBackgroundColor: '#8b5cf6',
+          tension: 0.3,
+          fill: true,
+          yAxisID: 'y1'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return ctx.dataset.label + ': $' + ctx.parsed.y.toFixed(2); }
+          }
+        },
+        annotation: {
+          annotations: {
+            warStart: {
+              type: 'line', xMin: 13.5, xMax: 13.5,
+              borderColor: '#fda4af66', borderWidth: 2, borderDash: [5, 4],
+              label: { display: true, content: '⚔️ War Begins', color: '#fda4af', backgroundColor: 'rgba(15,23,42,0.85)', font: { size: 10 }, position: 'start', padding: 4 }
+            },
+            preWar: {
+              type: 'line', yMin: 2.86, yMax: 2.86,
+              borderColor: '#34d39933', borderWidth: 1, borderDash: [4, 4],
+              label: { display: true, content: 'Pre-war: $2.86', color: '#34d39988', backgroundColor: 'transparent', font: { size: 9 }, position: 'start' }
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10 }, maxRotation: 45 } },
+        y: {
+          type: 'linear', position: 'left',
+          grid: { color: '#1e293b' },
+          ticks: { color: '#34d399', callback: v => '$' + v.toFixed(2) },
+          title: { display: true, text: 'NG $/MMBtu', color: '#34d399', font: { size: 10 } }
+        },
+        y1: {
+          type: 'linear', position: 'right',
+          grid: { drawOnChartArea: false },
+          ticks: { color: '#8b5cf6', callback: v => '$' + v.toFixed(2) },
+          title: { display: true, text: 'UNG $', color: '#8b5cf6', font: { size: 10 } }
+        }
+      }
+    }
+  });
+})();
+
+// ── ENERGY INFRASTRUCTURE STATUS ──
+(async function loadFacilityStatus() {
+  // Known facility data — comprehensive list with confirmed status as of Mar 7, 2026
+  const FACILITIES = [
+    // Iran — Struck
+    { name: "Kharg Island Terminal", country: "Iran", type: "Oil Terminal", capacity: "~6M bpd exports", lat: 29.24, lon: 50.33, status: "struck", date: "2026-02-28", source: "Reuters", note: "Israeli airstrikes, main oil export terminal" },
+    { name: "Isfahan Refinery", country: "Iran", type: "Refinery", capacity: "375k bpd", lat: 32.65, lon: 51.68, status: "struck", date: "2026-02-28", source: "Reuters", note: "Struck in initial wave" },
+    { name: "South Pars Gas Field", country: "Iran", type: "Gas Field", capacity: "14 bcf/day", lat: 27.50, lon: 52.60, status: "struck", date: "2025-06-15", source: "AP News", note: "Struck Jun 2025, partially restored" },
+    { name: "Bushehr", country: "Iran", type: "Nuclear/Energy", capacity: "1GW", lat: 28.97, lon: 50.84, status: "struck", date: "2026-03-04", source: "Energy Feed", note: "Confirmed hit" },
+    { name: "Bandar Abbas Refinery", country: "Iran", type: "Refinery", capacity: "320k bpd", lat: 27.19, lon: 56.27, status: "struck", date: "2026-03-04", source: "Energy Feed", note: "Near Hormuz, strategic target" },
+    { name: "Abadan Refinery", country: "Iran", type: "Refinery", capacity: "400k bpd", lat: 30.34, lon: 48.28, status: "operational", note: "No confirmed strikes" },
+    { name: "Tehran Refinery", country: "Iran", type: "Refinery", capacity: "250k bpd", lat: 35.59, lon: 51.37, status: "operational", note: "Inland, not struck" },
+    { name: "Tabriz Refinery", country: "Iran", type: "Refinery", capacity: "110k bpd", lat: 38.00, lon: 46.30, status: "operational", note: "Northwest, not struck" },
+    { name: "Asaluyeh Petrochemical", country: "Iran", type: "Petrochemical", capacity: "Major hub", lat: 27.48, lon: 52.61, status: "operational", note: "Near South Pars" },
+    { name: "Lavan Island", country: "Iran", type: "Oil Terminal", capacity: "200k bpd", lat: 26.80, lon: 53.36, status: "operational", note: "" },
+    { name: "Kermanshah Refinery", country: "Iran", type: "Refinery", capacity: "22k bpd", lat: 34.33, lon: 47.06, status: "operational", note: "" },
+    { name: "Shiraz Refinery", country: "Iran", type: "Refinery", capacity: "40k bpd", lat: 29.62, lon: 52.57, status: "operational", note: "" },
+
+    // Saudi Arabia
+    { name: "Ras Tanura Terminal", country: "Saudi Arabia", type: "Oil Terminal", capacity: "6.5M bpd", lat: 26.63, lon: 50.16, status: "struck", date: "2026-03-04", source: "Bloomberg/JPost", note: "Drone attack, world's largest offshore oil loading" },
+    { name: "Abqaiq Processing", country: "Saudi Arabia", type: "Processing", capacity: "7M bpd", lat: 25.94, lon: 49.68, status: "operational", note: "Previously attacked 2019, currently operational" },
+    { name: "Jubail Industrial", country: "Saudi Arabia", type: "Industrial", capacity: "Major hub", lat: 27.01, lon: 49.66, status: "operational", note: "" },
+    { name: "Yanbu Terminal", country: "Saudi Arabia", type: "Oil Terminal", capacity: "5M bpd", lat: 24.09, lon: 38.06, status: "operational", note: "Red Sea side, bypasses Hormuz" },
+    { name: "Ghawar Field", country: "Saudi Arabia", type: "Oil Field", capacity: "3.8M bpd", lat: 25.37, lon: 49.42, status: "operational", note: "World's largest oil field" },
+    { name: "Shaybah Field", country: "Saudi Arabia", type: "Oil Field", capacity: "1M bpd", lat: 22.52, lon: 54.00, status: "operational", note: "" },
+
+    // Qatar — Shutdown
+    { name: "Ras Laffan LNG", country: "Qatar", type: "LNG Terminal", capacity: "77M tons/yr", lat: 25.93, lon: 51.53, status: "shutdown", date: "2026-03-02", source: "Reuters", note: "World's largest LNG export facility — halted due to Hormuz blockade" },
+    { name: "Mesaieed Industrial", country: "Qatar", type: "Industrial", capacity: "Major hub", lat: 24.99, lon: 51.55, status: "shutdown", date: "2026-03-05", source: "Al Jazeera", note: "Doha explosions reported" },
+    { name: "North Field Gas", country: "Qatar", type: "Gas Field", capacity: "World's largest", lat: 26.00, lon: 52.00, status: "shutdown", date: "2026-03-06", source: "BBC", note: "Qatar warns all production could stop" },
+
+    // Israel — Struck/Shutdown
+    { name: "Haifa Oil Refinery", country: "Israel", type: "Refinery", capacity: "197k bpd", lat: 32.81, lon: 35.01, status: "struck", date: "2026-02-28", source: "Reuters", note: "Iranian missile damage" },
+    { name: "Leviathan Gas Platform", country: "Israel", type: "Gas Platform", capacity: "1.2 bcf/day", lat: 32.95, lon: 34.15, status: "shutdown", date: "2026-02-28", source: "Reuters", note: "Precautionary shutdown" },
+    { name: "Karish Gas Platform", country: "Israel", type: "Gas Platform", capacity: "0.8 bcf/day", lat: 32.78, lon: 34.12, status: "shutdown", date: "2026-02-28", source: "Reuters", note: "Precautionary shutdown" },
+    { name: "Tamar Gas Platform", country: "Israel", type: "Gas Platform", capacity: "1.0 bcf/day", lat: 32.60, lon: 34.03, status: "shutdown", date: "2026-02-28", source: "Reuters", note: "Precautionary shutdown" },
+    { name: "Ashdod Oil Terminal", country: "Israel", type: "Oil Terminal", capacity: "Import hub", lat: 31.80, lon: 34.65, status: "operational", note: "" },
+
+    // UAE
+    { name: "Fujairah Oil Terminal", country: "UAE", type: "Oil Terminal", capacity: "Major hub", lat: 25.13, lon: 56.33, status: "struck", date: "2026-03-04", source: "Energy Feed", note: "Strategic storage outside strait" },
+    { name: "Ruwais Refinery", country: "UAE", type: "Refinery", capacity: "837k bpd", lat: 24.11, lon: 52.73, status: "operational", note: "ADNOC flagship" },
+    { name: "Jebel Dhanna Terminal", country: "UAE", type: "Oil Terminal", capacity: "Export hub", lat: 24.19, lon: 52.58, status: "operational", note: "" },
+    { name: "Das Island Terminal", country: "UAE", type: "Oil Terminal", capacity: "Major export", lat: 25.15, lon: 52.87, status: "operational", note: "" },
+
+    // Iraq
+    { name: "Basrah ABOT Terminal", country: "Iraq", type: "Oil Terminal", capacity: "1.8M bpd", lat: 29.68, lon: 48.82, status: "operational", note: "Al Basrah Oil Terminal" },
+    { name: "Khor al-Amaya Terminal", country: "Iraq", type: "Oil Terminal", capacity: "400k bpd", lat: 29.78, lon: 48.83, status: "operational", note: "" },
+    { name: "Baiji Refinery", country: "Iraq", type: "Refinery", capacity: "310k bpd", lat: 34.93, lon: 43.49, status: "operational", note: "Iraq's largest" },
+    { name: "Kirkuk Oil Field", country: "Iraq", type: "Oil Field", capacity: "500k bpd", lat: 35.47, lon: 44.39, status: "operational", note: "" },
+
+    // Kuwait
+    { name: "Mina al-Ahmadi Refinery", country: "Kuwait", type: "Refinery", capacity: "466k bpd", lat: 29.07, lon: 48.15, status: "struck", date: "2026-03-05", source: "Energy Feed", note: "Kuwait confirmed struck" },
+    { name: "Mina Abdullah Refinery", country: "Kuwait", type: "Refinery", capacity: "270k bpd", lat: 29.00, lon: 48.18, status: "operational", note: "" },
+    { name: "Al-Zour Refinery", country: "Kuwait", type: "Refinery", capacity: "615k bpd", lat: 28.73, lon: 48.36, status: "operational", note: "Newest refinery" },
+
+    // Strait of Hormuz itself
+    { name: "Strait of Hormuz", country: "Intl Waters", type: "Chokepoint", capacity: "21M bpd / 15% global LNG", lat: 26.57, lon: 56.25, status: "shutdown", date: "2026-03-01", source: "Multiple", note: "IRGC blockade, transit -62%" },
+  ];
+
+  const total = FACILITIES.length;
+  const struck = FACILITIES.filter(f => f.status === 'struck');
+  const shutdown = FACILITIES.filter(f => f.status === 'shutdown');
+  const operational = FACILITIES.filter(f => f.status === 'operational');
+  const offline = struck.length + shutdown.length;
+
+  document.getElementById('facilityTotal').textContent = total;
+  document.getElementById('facilityOp').textContent = operational.length;
+  document.getElementById('facilityOpPct').textContent = Math.round(operational.length / total * 100) + '% of baseline';
+  document.getElementById('facilityStruck').textContent = struck.length;
+  document.getElementById('facilityStruckPct').textContent = Math.round(struck.length / total * 100) + '% of total';
+  document.getElementById('facilityShutdown').textContent = shutdown.length;
+  document.getElementById('facilityShutdownPct').textContent = Math.round(shutdown.length / total * 100) + '% of total';
+  document.getElementById('facilityOffline').textContent = offline;
+  document.getElementById('facilityOfflinePct').textContent = Math.round(offline / total * 100) + '% of total';
+
+  // Render facility grid
+  const grid = document.getElementById('facilityGrid');
+  const statusColor = { struck: '#f87171', shutdown: '#64748b', operational: '#34d399' };
+  const statusIcon = { struck: '💥', shutdown: '⏸️', operational: '✅' };
+  const statusBorder = { struck: '#e05252', shutdown: '#475569', operational: '#15803d' };
+
+  // Sort: struck first, then shutdown, then operational
+  const sorted = [...FACILITIES].sort((a, b) => {
+    const order = { struck: 0, shutdown: 1, operational: 2 };
+    return (order[a.status] || 9) - (order[b.status] || 9);
+  });
+
+  grid.innerHTML = sorted.map(f => `
+    <div style="background:#111827;border:1px solid ${statusBorder[f.status]};border-radius:6px;padding:10px 12px;display:flex;gap:8px;align-items:flex-start">
+      <span style="font-size:16px;flex-shrink:0">${statusIcon[f.status]}</span>
+      <div style="min-width:0">
+        <div style="font-size:12px;font-weight:700;color:${statusColor[f.status]};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+        <div style="font-size:10px;color:#94a3b8">${f.country} · ${f.type}</div>
+        <div style="font-size:10px;color:#64748b">${f.capacity}</div>
+        ${f.date ? `<div style="font-size:10px;color:${statusColor[f.status]};margin-top:2px">${f.status.toUpperCase()} ${f.date}${f.source ? ' · ' + f.source : ''}</div>` : ''}
+        ${f.note ? `<div style="font-size:9px;color:#475569;margin-top:1px">${f.note}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  // Timeline chart — facilities offline per day
+  const timeline = [
+    { date: '2026-02-27', struck: 0, shutdown: 0, label: 'Pre-war baseline' },
+    { date: '2026-02-28', struck: 3, shutdown: 3, label: 'Iran strikes begin: Kharg, Isfahan, Haifa struck; Leviathan/Karish/Tamar shutdown' },
+    { date: '2026-03-01', struck: 3, shutdown: 4, label: 'Hormuz blockade declared by IRGC' },
+    { date: '2026-03-02', struck: 3, shutdown: 5, label: 'Ras Laffan LNG shutdown' },
+    { date: '2026-03-03', struck: 3, shutdown: 5, label: 'Transit collapses' },
+    { date: '2026-03-04', struck: 7, shutdown: 5, label: 'Ras Tanura drone, Bushehr, Bandar Abbas, Fujairah struck' },
+    { date: '2026-03-05', struck: 8, shutdown: 6, label: 'Kuwait Mina al-Ahmadi struck, Mesaieed shutdown, Doha explosions' },
+    { date: '2026-03-06', struck: 8, shutdown: 7, label: 'North Field shutdown — Qatar warns total halt' },
+    { date: '2026-03-07', struck: 8, shutdown: 7, label: 'Current state' },
+  ];
+
+  const ctx = document.getElementById('facilityChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: timeline.map(t => t.date.slice(5)),
+      datasets: [
+        {
+          label: 'Struck/Damaged',
+          data: timeline.map(t => t.struck),
+          backgroundColor: '#f8717199',
+          borderColor: '#f87171',
+          borderWidth: 1,
+          stack: 'offline'
+        },
+        {
+          label: 'Shutdown/Offline',
+          data: timeline.map(t => t.shutdown),
+          backgroundColor: '#64748b99',
+          borderColor: '#64748b',
+          borderWidth: 1,
+          stack: 'offline'
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            afterBody: function(items) {
+              const idx = items[0].dataIndex;
+              const t = timeline[idx];
+              return [t.label, '', 'Total offline: ' + (t.struck + t.shutdown) + ' / ' + total];
+            }
+          }
+        },
+        annotation: {
+          annotations: {
+            baseline: {
+              type: 'line', yMin: 0, yMax: 0,
+              borderColor: '#34d39944', borderWidth: 1, borderDash: [4, 4],
+              label: { display: true, content: 'Baseline: 0 offline', color: '#34d39988', backgroundColor: 'transparent', font: { size: 9 }, position: 'start' }
+            },
+            currentLine: {
+              type: 'line', yMin: offline, yMax: offline,
+              borderColor: '#f8717144', borderWidth: 1, borderDash: [4, 4],
+              label: { display: true, content: `Current: ${offline} offline (${Math.round(offline/total*100)}%)`, color: '#f8717188', backgroundColor: 'transparent', font: { size: 9 }, position: 'end' }
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+        y: {
+          grid: { color: '#1e293b' }, ticks: { color: '#94a3b8', stepSize: 2 },
+          title: { display: true, text: 'Facilities Offline', color: '#f59e0b', font: { size: 11 } },
+          suggestedMax: 20, min: 0, stacked: true
+        }
+      }
+    }
+  });
+})();
 </script>
 </body>
 </html>
